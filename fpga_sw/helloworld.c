@@ -46,87 +46,32 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "platform.h"
 #include "xil_printf.h"
 
-
-u32 *APB = XPAR_APB_M_0_BASEADDR;
-
-
-int writeSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
-
-int write4readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
-
-int readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-	data = APB[3];
-	return data;
-};
+u32 *UART = XPAR_AXI_UARTLITE_0_BASEADDR;
 
 int main()
 {
-	int i;
-    char ch,ch1,ch2;
-	int data,Rdata;
     init_platform();
-
-    xil_printf ("\n\rhello world\n\r");
-
-    APB[4] = 0x200; // set SCCB clock to ~200Khz
+    char c;
+    int data;
+    xil_printf("U");
+//    xil_printf("Hello World\n\r");
 
     while (1)
     {
-    	ch = 0;
-    	data = 0;
-    	while (ch != 13)
+    	data = UART[2];
+    	while (data == 4)
     	{
-    	ch = getchar();
-    	xil_printf ("%c",ch);
-    	if (ch == 13) xil_printf("\n\r");
-    	 else if (ch == 127)  data = data/16;
-    	 else if ((ch>47) && (ch<58))  data = (16*data)+ ch - 48;
-    	 else if ((ch>96) && (ch<103)) data = (16*data)+ ch - 87;
+        	data = UART[2];
     	};
-    	if (data < 0x1000000){
-    		 writeSCCB(data);
-    	xil_printf ("\n\rwrite data %x\n\r",data);
-    	} else if (data < 0x2000000){
-    		write4readSCCB(data);
-    		Rdata = readSCCB(0x1000000+data);
-    	    xil_printf ("\n\r read from %x data %x \n\r",data,Rdata);
-    	};
-
+    	c =  UART[0];
+//    	c = getchar();
+    	putchar(c);
+    	xil_printf("%d %c",c,c);
+    	if (c == 13) xil_printf("\r\n");
     };
 
     cleanup_platform();
