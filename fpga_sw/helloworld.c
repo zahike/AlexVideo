@@ -48,11 +48,10 @@
 #include <stdio.h>
 #include "platform.h"
 #include "xil_printf.h"
-#include "sleep.h"
 
-//#define SIM;
 
 u32 *APB = XPAR_APB_M_0_BASEADDR;
+
 
 int writeSCCB (int WriteData)
 {
@@ -98,67 +97,37 @@ int readSCCB (int WriteData)
 int main()
 {
 	int i;
-	int data,addChar;
+    char ch,ch1,ch2;
+	int data,Rdata;
     init_platform();
 
-#ifdef SIM
-    APB[4] = 0x5;
-#else
-    APB[4] = 0x100;
-#endif
-    writeSCCB (0x420a81);
-    write4readSCCB (0x1420a00);
-    data = readSCCB (0x2420a00);
+    xil_printf ("\n\rhello world\n\r");
 
-      xil_printf("Hello World %x \n\r",data);
+    APB[4] = 0x200; // set SCCB clock to ~200Khz
 
-//    APB[2] = 0x420a00;
-//    APB[0] = 0x1;
-//
-//    data = 1;
-//    while (data == 1)
-//    {
-//    	data = APB[1];
-//    };
+    while (1)
+    {
+    	ch = 0;
+    	data = 0;
+    	while (ch != 13)
+    	{
+    	ch = getchar();
+    	xil_printf ("%c",ch);
+    	if (ch == 13) xil_printf("\n\r");
+    	 else if (ch == 127)  data = data/16;
+    	 else if ((ch>47) && (ch<58))  data = (16*data)+ ch - 48;
+    	 else if ((ch>96) && (ch<103)) data = (16*data)+ ch - 87;
+    	};
+    	if (data < 0x1000000){
+    		 writeSCCB(data);
+    	xil_printf ("\n\rwrite data %x\n\r",data);
+    	} else if (data < 0x2000000){
+    		write4readSCCB(data);
+    		Rdata = readSCCB(0x1000000+data);
+    	    xil_printf ("\n\r read from %x data %x \n\r",data,Rdata);
+    	};
 
-//    APB[2] = 0x1420b00;
-//    APB[0] = 0x1;
-//
-//    data = 1;
-//    while (data == 1)
-//    {
-//    	data = APB[1];
-//    };
-//
-//    a = 1234;
-
-//    c = "1";
-//    print("Hello World\n\r");
-//    xil_printf("Hello World %s\n\r",c);
-//   while (1)
-//   {
-//	   c = 0;
-//	   data = 0;
-//	   while (c != 13)
-//	   {
-//		   c = getc(stdin);
-//		   xil_printf("%c %d ",c,c);
-////		   xil_printf("%c",c,c);
-//		   if (c == 13) break;
-//		   else if (c == 127)  data = data/16;
-//		   else if ((c>47) && (c<58))  data = (16*data)+ c - 48;
-//		   else if ((c>96) && (c<103)) data = (16*data)+ c - 87;
-//		   }
-//	    xil_printf("\n\r");
-//	    xil_printf("data = %x %d \n\r",data,data);
-//
-//	    APB[2] = data;
-//	    APB[0] = 0x1;
-//
-//
-////	   sleep (1000);
-//
-//   };
+    };
 
     cleanup_platform();
     return 0;
