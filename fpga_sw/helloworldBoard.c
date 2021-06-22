@@ -46,32 +46,101 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include "platform.h"
 #include "xil_printf.h"
+u32 *APB = XPAR_APB_M_0_BASEADDR;
+u32 *UART = XPAR_UARTLITE_0_BASEADDR;
+int writeSCCB (int WriteData)
+{
+	int data;
 
-u32 *UART = XPAR_AXI_UARTLITE_0_BASEADDR;
+	APB[2] = WriteData;
+	APB[0] = 1;
+	data = 1;
+	while (data)
+	{
+		data = APB[1];
+	};
+};
+
+int write4readSCCB (int WriteData)
+{
+	int data;
+
+	APB[2] = WriteData;
+	APB[0] = 1;
+	data = 1;
+	while (data)
+	{
+		data = APB[1];
+	};
+};
+
+int readSCCB (int WriteData)
+{
+	int data;
+
+	APB[2] = WriteData;
+	APB[0] = 1;
+	data = 1;
+	while (data)
+	{
+		data = APB[1];
+	};
+	data = APB[3];
+	return data;
+};
 
 int main()
 {
+	int i;
+    char ch,ch1,ch2;
+	int data,Rdata;
+	int ChUart;
+	int Uread;
+	int freq;
     init_platform();
-    char c;
-    int data;
-    xil_printf("U");
-//    xil_printf("Hello World\n\r");
+
+    xil_printf ("\n\rhello world\n\r");
+
+    APB[4] = 0x100; // set SCCB clock to ~200Khz
+    APB[5] = 0x0;  // delay from negedge to data
 
     while (1)
     {
-    	data = UART[2];
-    	while (data == 4)
+    	int i;
+    	ch = 0;
+    	data = 0;
+    	while (ch != 13)
     	{
-        	data = UART[2];
+
+    	Uread = 0;
+    	while (!(Uread & 0x00000001)){
+    		Uread = UART[2];
+    	}
+    	ch = UART[0];
+    	xil_printf ("%c",ch);
+    	if (ch == 13) xil_printf("\n\r");
+    	 else if (ch == 127)  data = data/16;
+    	 else if ((ch>47) && (ch<58))  data = (16*data)+ ch - 48;
+    	 else if ((ch>96) && (ch<103)) data = (16*data)+ ch - 87;
     	};
-    	c =  UART[0];
-//    	c = getchar();
-    	putchar(c);
-    	xil_printf("%d %c",c,c);
-    	if (c == 13) xil_printf("\r\n");
+    	if (data < 0x10){
+    		APB[5] = 0x10*data;
+    		xil_printf("delay %d nSec\r\n",160*data);
+    	} else if (data < 0x1000) {
+    		APB[4] = data;
+    		freq = 1000000/(data*20);
+    		xil_printf("frequency %d \n\r",freq);
+    	} else if (data < 0x10000){
+    		write4readSCCB(0x1000000 | (data << 8));
+    		Rdata = readSCCB(0x2000000 | (data << 8));
+    	    xil_printf ("\n\r read from %x data %x \n\r",data,Rdata);
+    	} else if (data < 0x1000000){
+    		 writeSCCB(data);
+    	xil_printf ("\n\rwrite data %x\n\r",data);
+    	};
+
     };
 
     cleanup_platform();

@@ -36,6 +36,19 @@ initial begin
 force SCCB_MB_Top_inst.WDrstnCount = 20'hffff0;
 release SCCB_MB_Top_inst.WDrstnCount;
 end 
+
+
+initial begin
+#40000;
+@(posedge clk);
+@(posedge clk);
+@(posedge clk);
+@(posedge clk);
+@(posedge clk);
+force SCCB_MB_Top_inst.SCCB_inst.Start = 1'b1;
+@(posedge clk);
+release SCCB_MB_Top_inst.SCCB_inst.Start;
+end 
 wire  usb_uart_rxd =1'b0;
 wire  usb_uart_txd;
 

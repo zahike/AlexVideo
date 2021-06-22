@@ -27,6 +27,7 @@ input  sys_clock,
 output wire SCCB_CLK,
 inout  wire SCCB_DATA,
 
+input       Dbun       ,
 output      cam_clk    ,
 input       cam_in_clk ,
 input       cam_vsynk  ,
@@ -52,7 +53,7 @@ assign SCCB_DATA = (~sccb_data_en) ? sccb_data_out : 1'bz;
 
 assign sccb_data_in = SCCB_DATA;
 
-assign cam_rstn = 1'b1;
+assign cam_rstn = (!Dbun) ? 1'b1 : 1'b0;
 assign cam_pwdn = 1'b0;
 
 wire clk;		//output  clk;
@@ -103,6 +104,7 @@ wire        Busy    ;
 wire [31:0] DataOut ;
 wire [31:0] DataIn  ;
 wire [15:0] ClockDiv;
+wire [15:0] NegDel  ;
 
 
 RegisterBlock RegisterBlock_inst
@@ -110,22 +112,39 @@ RegisterBlock RegisterBlock_inst
 .clk(clk),		//input  clk
 .rstn(rstn),        //input [0:0] rstn
 
-.APB_M_0_paddr(APB_M_0_paddr),		//input [31:0] APB_M_0_paddr
-.APB_M_0_penable(APB_M_0_penable),        //input  APB_M_0_penable
-.APB_M_0_prdata(APB_M_0_prdata),        //output [31:0] APB_M_0_prdata
-.APB_M_0_pready(APB_M_0_pready),        //output [0:0] APB_M_0_pready
-.APB_M_0_psel(APB_M_0_psel),        //input [0:0] APB_M_0_psel
-.APB_M_0_pslverr(APB_M_0_pslverr),        //output [0:0] APB_M_0_pslverr
-.APB_M_0_pwdata(APB_M_0_pwdata),        //input [31:0] APB_M_0_pwdata
-.APB_M_0_pwrite(APB_M_0_pwrite),        //input  APB_M_0_pwrite
+.APB_M_0_paddr   (APB_M_0_paddr  ),		//input [31:0] APB_M_0_paddr
+.APB_M_0_penable (APB_M_0_penable),        //input  APB_M_0_penable
+.APB_M_0_prdata  (APB_M_0_prdata ),        //output [31:0] APB_M_0_prdata
+.APB_M_0_pready  (APB_M_0_pready ),        //output [0:0] APB_M_0_pready
+.APB_M_0_psel    (APB_M_0_psel   ),        //input [0:0] APB_M_0_psel
+.APB_M_0_pslverr (APB_M_0_pslverr),        //output [0:0] APB_M_0_pslverr
+.APB_M_0_pwdata  (APB_M_0_pwdata ),        //input [31:0] APB_M_0_pwdata
+.APB_M_0_pwrite  (APB_M_0_pwrite ),        //input  APB_M_0_pwrite
 
 .Start   (Start   ), //output        Start,
 .Busy    (Busy    ), //input         Busy,
 .DataOut (DataOut ), //output [31:0] DataOut,
 .DataIn  (DataIn  ), //input  [31:0] DataIn,
-.ClockDiv(ClockDiv) //output [15:0] ClockDiv
+.ClockDiv(ClockDiv), //output [15:0] ClockDiv
+.NegDel  (NegDel  )  //output [15:0] NegDel
 
 );
+
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+ila_1 APB_ila (
+	.clk(clk), // input wire clk
+
+	.probe0(APB_M_0_paddr  ), // input wire [31:0]  probe0  
+	.probe1(APB_M_0_penable), // input wire [0:0]  probe1 
+	.probe2(APB_M_0_prdata ), // input wire [31:0]  probe2 
+	.probe3(APB_M_0_pready ), // input wire [0:0]  probe3 
+	.probe4(APB_M_0_psel   ), // input wire [0:0]  probe4 
+	.probe5(APB_M_0_pslverr), // input wire [0:0]  probe5 
+	.probe6(APB_M_0_pwdata ), // input wire [31:0]  probe6 
+	.probe7(APB_M_0_pwrite ), // input wire [0:0]  probe7 
+	.probe8(Start), // input wire [0:0]  probe8
+	.probe9(Busy) // input wire [0:0]  probe9
+	);
 
 wire [7:0] ReadData;
 //wire       SCCB_CLK ;
@@ -136,6 +155,7 @@ SCCB SCCB_inst(
 .rstn(rstn),
 
 .ClkDiv(ClockDiv),
+.NegDel(NegDel  ),
 
 .Start(Start),
 .DataIn(DataOut[25:0]),
@@ -173,8 +193,9 @@ always @(posedge SCCB_CLK or negedge WDrstn)
 ila_0 your_instance_name (
 	.clk(ila_clk), // input wire clk
 
-
-	.probe0(WDrstn), // input wire [0:0]  probe0  
+//	.probe0(WDrstn), // input wire [0:0]  probe0  
+//	.probe0(cam_rstn), // input wire [0:0]  probe0  
+	.probe0(sccb_data_en), // input wire [0:0]  probe0  
 	.probe1(SCCB_CLK), // input wire [0:0]  probe1 
 	.probe2(sccb_data_in), // input wire [0:0]  probe2 
 	.probe3(BitCount), // input wire [7:0]  probe3 

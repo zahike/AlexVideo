@@ -37,7 +37,8 @@ output        Start,
 input         Busy,
 output [31:0] DataOut,
 input  [31:0] DataIn,
-output [15:0] ClockDiv
+output [15:0] ClockDiv,
+output [15:0] NegDel 
     );
 
 reg        RegStart   ;
@@ -56,12 +57,18 @@ always @(posedge clk or negedge rstn)
     if (!rstn) RegClockDiv <= 32'h00000000;
      else if (APB_M_0_penable && APB_M_0_psel && APB_M_0_pwrite && (APB_M_0_paddr[7:0] == 8'h10)) RegClockDiv <= APB_M_0_pwdata;
 assign ClockDiv = RegClockDiv;
+reg [15:0] RegNegDel;
+always @(posedge clk or negedge rstn)
+    if (!rstn) RegNegDel <= 32'h00000000;
+     else if (APB_M_0_penable && APB_M_0_psel && APB_M_0_pwrite && (APB_M_0_paddr[7:0] == 8'h14)) RegNegDel <= APB_M_0_pwdata;
+assign NegDel = RegNegDel;
 
 assign APB_M_0_prdata = (APB_M_0_paddr[7:0] == 8'h00) ? {31'h00000000,RegStart} :
                         (APB_M_0_paddr[7:0] == 8'h04) ? {31'h00000000,Busy}     :
                         (APB_M_0_paddr[7:0] == 8'h08) ? RegDataOut              :
                         (APB_M_0_paddr[7:0] == 8'h0c) ? DataIn                  :
-                        (APB_M_0_paddr[7:0] == 8'h10) ? {16'h0000,ClockDiv}     : 32'h00000000;
+                        (APB_M_0_paddr[7:0] == 8'h10) ? {16'h0000,RegClockDiv}  : 
+                        (APB_M_0_paddr[7:0] == 8'h10) ? {16'h0000,RegNegDel}    : 32'h00000000;
 
 reg Reg_pready;
 always @(posedge clk or negedge rstn)
