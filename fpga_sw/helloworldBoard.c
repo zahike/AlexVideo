@@ -48,48 +48,55 @@
 #include <stdio.h>
 #include "platform.h"
 #include "xil_printf.h"
+#include "SCCB.h"
+
 u32 *APB = XPAR_APB_M_0_BASEADDR;
 u32 *UART = XPAR_UARTLITE_0_BASEADDR;
-int writeSCCB (int WriteData)
-{
-	int data;
 
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
+int writeSCCB (int WriteData);
+int write4readSCCB (int WriteData);
+int readSCCB (int WriteData);
 
-int write4readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
-
-int readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-	data = APB[3];
-	return data;
-};
+//int writeSCCB (int WriteData)
+//{
+//	int data;
+//
+//	APB[2] = WriteData;
+//	APB[0] = 1;
+//	data = 1;
+//	while (data)
+//	{
+//		data = APB[1];
+//	};
+//};
+//
+//int write4readSCCB (int WriteData)
+//{
+//	int data;
+//
+//	APB[2] = WriteData;
+//	APB[0] = 1;
+//	data = 1;
+//	while (data)
+//	{
+//		data = APB[1];
+//	};
+//};
+//
+//int readSCCB (int WriteData)
+//{
+//	int data;
+//
+//	APB[2] = WriteData;
+//	APB[0] = 1;
+//	data = 1;
+//	while (data)
+//	{
+//		data = APB[1];
+//	};
+//	data = APB[3];
+//	return data;
+//};
 
 int main()
 {
