@@ -42,6 +42,9 @@ output  usb_uart_txd
     );
 
 
+wire clk;		//output  clk;
+wire [0:0] rstn;		//output [0:0] rstn;
+//wire SCCB_DATAin = SCCB_DATA;
 wire sccb_clk      ;
 wire sccb_clk_en   ;
 wire sccb_data_out ;
@@ -53,12 +56,17 @@ assign SCCB_DATA = (~sccb_data_en) ? sccb_data_out : 1'bz;
 
 assign sccb_data_in = SCCB_DATA;
 
-assign cam_rstn = (!Dbun) ? 1'b1 : 1'b0;
-assign cam_pwdn = 1'b0;
+assign cam_pwdn = (Dbun) ? 1'b1 : 1'b0;
+reg [19:0] ResetDelay;
+always @(posedge clk or negedge rstn)
+    if (!rstn) ResetDelay <= 20'h00000;
+     else if (Dbun == 1'b1) ResetDelay <= 20'h00000;
+     else if (ResetDelay == 20'h80000) ResetDelay <= 20'h80000;
+     else ResetDelay <= ResetDelay + 1;
+     
+//assign cam_rstn = (!Dbun) ? 1'b1 : 1'b0;
+assign cam_rstn = (ResetDelay == 20'h80000) ? 1'b1 : 1'b0;
 
-wire clk;		//output  clk;
-wire [0:0] rstn;		//output [0:0] rstn;
-//wire SCCB_DATAin = SCCB_DATA;
 
 /////////////////////////////////////////////////
 ////////////    MB SoC System     ///////////////
