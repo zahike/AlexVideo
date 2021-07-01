@@ -48,50 +48,13 @@
 #include <stdio.h>
 #include "platform.h"
 #include "xil_printf.h"
+#include "SCCB.h"
 
 u32 *APB = XPAR_APB_M_0_BASEADDR;
 
-
-int writeSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
-
-int write4readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-};
-
-int readSCCB (int WriteData)
-{
-	int data;
-
-	APB[2] = WriteData;
-	APB[0] = 1;
-	data = 1;
-	while (data)
-	{
-		data = APB[1];
-	};
-	data = APB[3];
-	return data;
-};
+int writeSCCB (int WriteData);
+int write4readSCCB (int WriteData);
+int readSCCB (int WriteData);
 
 int main()
 {
@@ -99,15 +62,16 @@ int main()
 	int data,Rdata;
     init_platform();
 
-    APB[4] = 0x10; // set SCCB clock to ~200Khz
-    APB[5] = 0x2;  // delay from negedge to data
+    APB[5] = 0x10; // set SCCB clock to ~200Khz
+    APB[6] = 0x0;  // delay from negedge to data
 
-    data = 0x420566;
+    data = 0x78301255;
 	 writeSCCB(data);
 	 for (i=0;i<50;i++);
-	data = 0x1420566;
+	data = 0x78301255;
 	 write4readSCCB(data);
-	 Rdata = readSCCB(0x1000000+data);
+	 for (i=0;i<10;i++);
+	 Rdata = readSCCB(data);
 
 //    print("Hello World\n\r");
 

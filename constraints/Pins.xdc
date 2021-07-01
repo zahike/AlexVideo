@@ -35,7 +35,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports {cam_data[2]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {cam_data[1]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {cam_data[0]}]
 
-
+set_property PACKAGE_PIN A13 [get_ports DeBug_cam_clk   ]
+set_property PACKAGE_PIN A14 [get_ports DeBug_cam_in_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports DeBug_cam_clk   ]
+set_property IOSTANDARD LVCMOS33 [get_ports DeBug_cam_in_clk]
 
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]

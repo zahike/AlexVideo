@@ -36,11 +36,16 @@ input [7:0] cam_data   ,
 output      cam_rstn   ,
 output      cam_pwdn   ,
 
+output      DeBug_cam_clk    ,
+output      DeBug_cam_in_clk ,
+
+
 input  usb_uart_rxd,
 output  usb_uart_txd
 
     );
-
+assign DeBug_cam_clk    = cam_clk   ;
+assign DeBug_cam_in_clk = cam_in_clk;
 
 wire clk;		//output  clk;
 wire [0:0] rstn;		//output [0:0] rstn;
@@ -58,7 +63,7 @@ assign sccb_data_in = SCCB_DATA;
 
 assign cam_pwdn = (Dbun) ? 1'b1 : 1'b0;
 reg [19:0] ResetDelay;
-always @(posedge clk or negedge rstn)
+always @(posedge cam_clk or negedge rstn)
     if (!rstn) ResetDelay <= 20'h00000;
      else if (Dbun == 1'b1) ResetDelay <= 20'h00000;
      else if (ResetDelay == 20'h80000) ResetDelay <= 20'h80000;
@@ -111,6 +116,7 @@ wire        Start   ;
 wire        Busy    ;
 wire [31:0] DataOut ;
 wire [31:0] DataIn  ;
+wire [1:0]  WR;
 wire [15:0] ClockDiv;
 wire [15:0] NegDel  ;
 
@@ -133,6 +139,7 @@ RegisterBlock RegisterBlock_inst
 .Busy    (Busy    ), //input         Busy,
 .DataOut (DataOut ), //output [31:0] DataOut,
 .DataIn  (DataIn  ), //input  [31:0] DataIn,
+.WR      (WR)     ,  //output [1:0]  WR,
 .ClockDiv(ClockDiv), //output [15:0] ClockDiv
 .NegDel  (NegDel  )  //output [15:0] NegDel
 
@@ -166,7 +173,8 @@ SCCB SCCB_inst(
 .NegDel(NegDel  ),
 
 .Start(Start),
-.DataIn(DataOut[25:0]),
+.WR(WR),
+.DataIn(DataOut),
 .Busy(Busy),
 .ReadData(ReadData),
 
@@ -198,16 +206,23 @@ always @(posedge SCCB_CLK or negedge WDrstn)
     if (!WDrstn) GetData <= 12'h000;
      else GetData <= {GetData[10:0],sccb_data_in};
 
-ila_0 your_instance_name (
-	.clk(ila_clk), // input wire clk
 
-//	.probe0(WDrstn), // input wire [0:0]  probe0  
-//	.probe0(cam_rstn), // input wire [0:0]  probe0  
+ila_0 your_instance_name (
+	.clk(clk), // input wire clk
+
 	.probe0(sccb_data_en), // input wire [0:0]  probe0  
 	.probe1(SCCB_CLK), // input wire [0:0]  probe1 
 	.probe2(sccb_data_in), // input wire [0:0]  probe2 
 	.probe3(BitCount), // input wire [7:0]  probe3 
-	.probe4(GetData[9:2]) // input wire [7:0]  probe4
+	.probe4(GetData[9:2]), // input wire [7:0]  probe4
+    .probe5 (cam_clk   ), // input wire [0:0]  probe5 
+    .probe6 (cam_in_clk), // input wire [0:0]  probe6 
+    .probe7 (cam_vsynk ), // input wire [0:0]  probe7 
+    .probe8 (cam_href  ), // input wire [0:0]  probe8 
+    .probe9 (cam_data  ), // input wire [7:0]  probe9 
+    .probe10(cam_rstn  ), // input wire [0:0]  probe10 
+    .probe11(cam_pwdn  ) // input wire [0:0]  probe11
+	
 );
 
 assign DataIn = {24'h000000,ReadData};
