@@ -37,7 +37,7 @@ output        Start,
 input         Busy,
 output [31:0] DataOut,
 input  [31:0] DataIn,
-output [1:0]  WR,
+output [3:0]  WR,
 output [15:0] ClockDiv,
 output [15:0] NegDel 
     );
@@ -74,7 +74,7 @@ assign APB_M_0_prdata = (APB_M_0_paddr[7:0] == 8'h00) ? {31'h00000000,RegStart} 
                         (APB_M_0_paddr[7:0] == 8'h04) ? {31'h00000000,Busy}     :
                         (APB_M_0_paddr[7:0] == 8'h08) ? RegDataOut              :
                         (APB_M_0_paddr[7:0] == 8'h0c) ? DataIn                  :
-                        (APB_M_0_paddr[7:0] == 8'h10) ? {30'h00000000,RegWR}    : 
+                        (APB_M_0_paddr[7:0] == 8'h10) ? {28'h00000000,RegWR}    : 
                         (APB_M_0_paddr[7:0] == 8'h14) ? {16'h0000,RegClockDiv}  : 
                         (APB_M_0_paddr[7:0] == 8'h18) ? {16'h0000,RegNegDel}    : 32'h00000000;
 

@@ -28,7 +28,7 @@ input [15:0] ClkDiv,
 input [15:0] NegDel,
 
 input Start,
-input [1:0] WR,
+input [3:0] WR,
 input [31:0] DataIn,
 output Busy,
 output [7:0] ReadData,
@@ -84,33 +84,45 @@ wire W = 1'b0;
 wire R = 1'b1;
 wire X = 1'b1;
 wire NA = 1'b1;
-//wire [7:1] IDadd = DataIn[23:17];
-//wire [7:0] Sub_Add = DataIn[15:8];
-//wire [7:0] Wdata = DataIn[7:0];
+wire NewCam = (WR[3:2] == 2'b01) ? 1'b1 : 1'b0;
 wire [7:1] IDadd = DataIn[31:25];
 wire [7:0] Sub_AddM = DataIn[23:16];
 wire [7:0] Sub_AddL = DataIn[15:8];
-wire [7:0] Wdata = DataIn[7:0];
-//wire Read = DataIn[24];
+wire [7:0] Wdata = (NewCam) ? DataIn[7:0] : DataIn[15:8];
 wire Write_sig = (WR == 2'b00) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b00) ? 1'b1 : 1'b0;
 wire Read1_sig = (WR == 2'b01) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b01) ? 1'b1 : 1'b0;
 wire Read2_sig = (WR == 2'b10) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b10) ? 1'b1 : 1'b0;
 reg [37:0] SCCBshift;     
 always @(posedge clk or negedge rstn)
     if (!rstn) SCCBshift <= 38'h0000000000;
-     else if (Write_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,Sub_AddL,X,Wdata,X,SB};
-     else if (Read1_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,Sub_AddL,X,SB,1'b0,8'h00};
-     else if (Read2_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,R,X,8'hff,NA,SB,1'b0,8'h00,1'b0,8'h00};
-     else  if (Reg_NegDel) SCCBshift <= {SCCBshift[37:0],1'b0};
+     else if (NewCam) begin
+              if (Write_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,Sub_AddL,X,Wdata,X,SB};
+         else if (Read1_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,Sub_AddL,X,SB,1'b0,8'h00};
+         else if (Read2_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,R,X,8'hff,NA,SB,1'b0,8'h00,1'b0,8'h00};
+         else  if (Reg_NegDel) SCCBshift <= {SCCBshift[37:0],1'b0};
+               end
+     else begin           
+              if (Write_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,Wdata,X,SB,1'b0,8'h00};
+         else if (Read1_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,W,X,Sub_AddM,X,SB,1'b0,8'h00,1'b0,8'h00};
+         else if (Read2_sig && (Start || Reg_Start)) SCCBshift <= {SB,IDadd,R,X,8'hff,NA,SB,1'b0,8'h00,1'b0,8'h00};            
+         else if (Reg_NegDel) SCCBshift <= {SCCBshift[37:0],1'b0};
+               end
      
 reg [6:0] Bit_Counter;
 reg Reg_Busy;
 always @(posedge clk or negedge rstn)
     if (!rstn) Reg_Busy <= 1'b0;
-     else if (Reg_Start && Reg_NegDel) Reg_Busy <= 1'b1;     
-     else if (Write_sig && (Bit_Counter == 6'd37) && Reg_NegDel) Reg_Busy <= 1'b0;     
-     else if (Read1_sig && (Bit_Counter == 6'd28) && Reg_NegDel) Reg_Busy <= 1'b0;     
-     else if (Read2_sig && (Bit_Counter == 6'd19) && Reg_NegDel) Reg_Busy <= 1'b0;     
+     else if (Reg_Start && Reg_NegDel) Reg_Busy <= 1'b1;  
+     else if (NewCam) begin   
+               if (Write_sig && (Bit_Counter == 6'd37) && Reg_NegDel) Reg_Busy <= 1'b0;     
+          else if (Read1_sig && (Bit_Counter == 6'd28) && Reg_NegDel) Reg_Busy <= 1'b0;     
+          else if (Read2_sig && (Bit_Counter == 6'd19) && Reg_NegDel) Reg_Busy <= 1'b0;    
+            end 
+     else  begin   
+               if (Write_sig && (Bit_Counter == 6'd28) && Reg_NegDel) Reg_Busy <= 1'b0;     
+          else if (Read1_sig && (Bit_Counter == 6'd19) && Reg_NegDel) Reg_Busy <= 1'b0;     
+          else if (Read2_sig && (Bit_Counter == 6'd19) && Reg_NegDel) Reg_Busy <= 1'b0;    
+            end 
 always @(posedge clk or negedge rstn)
     if (!rstn) Bit_Counter <= 6'h00;
      else if (!Reg_Busy) Bit_Counter <= 6'h00;
@@ -121,9 +133,16 @@ always @(posedge clk or negedge rstn)
     if (!rstn) Reg_clkEn <= 1'b0;
      else if (!Reg_Busy) Reg_clkEn <= 1'b0;     
      else if ((Bit_Counter == 6'd00) && posSCCBclk) Reg_clkEn <= 1'b1;     
-     else if (Write_sig && (Bit_Counter == 6'd37) && posSCCBclk) Reg_clkEn <= 1'b0;     
-     else if (Read1_sig && (Bit_Counter == 6'd28) && posSCCBclk) Reg_clkEn <= 1'b0;     
-     else if (Read2_sig && (Bit_Counter == 6'd19) && posSCCBclk) Reg_clkEn <= 1'b0;     
+     else if (NewCam) begin   
+               if (Write_sig && (Bit_Counter == 6'd37) && posSCCBclk) Reg_clkEn <= 1'b0;     
+          else if (Read1_sig && (Bit_Counter == 6'd28) && posSCCBclk) Reg_clkEn <= 1'b0;     
+          else if (Read2_sig && (Bit_Counter == 6'd19) && posSCCBclk) Reg_clkEn <= 1'b0;
+            end     
+     else  begin   
+               if (Write_sig && (Bit_Counter == 6'd28) && posSCCBclk) Reg_clkEn <= 1'b0;     
+          else if (Read1_sig && (Bit_Counter == 6'd19) && posSCCBclk) Reg_clkEn <= 1'b0;     
+          else if (Read2_sig && (Bit_Counter == 6'd19) && posSCCBclk) Reg_clkEn <= 1'b0;
+            end     
 
 reg Reg_w_dataEn;
 always @(posedge clk or negedge rstn)

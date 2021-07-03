@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date: 15.06.2021 18:06:06
+// Create Date: 03.07.2021 12:07:48
 // Design Name: 
-// Module Name: SCCB_MB_Top
+// Module Name: CandV_Top
 // Project Name: 
 // Target Devices: 
 // Tool Versions: 
@@ -20,58 +20,62 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module SCCB_MB_Top(
-input  reset,
-input  sys_clock,
+module CandV_Top(
+input  wire reset            ,
+input  wire sys_clock        ,
+input  wire Dbun             ,
 
-output wire SCCB_CLK,
-inout  wire SCCB_DATA,
+// Camera interface 
+output wire SCCB_CLK         ,
+inout  wire SCCB_DATA        ,
 
-input       Dbun       ,
-output      cam_clk    ,
-input       cam_in_clk ,
-input       cam_vsynk  ,
-input       cam_href   ,
-input [7:0] cam_data   ,
-output      cam_rstn   ,
-output      cam_pwdn   ,
+output wire       cam_clk    ,
+input  wire       cam_in_clk ,
+input  wire       cam_vsynk  ,
+input  wire       cam_href   ,
+input  wire [7:0] cam_data   ,
+output wire       cam_rstn   ,
+output wire       cam_pwdn   ,
 
-output      DeBug_cam_clk    ,
-output      DeBug_cam_in_clk ,
+// VGA interface
+output wire [3:0] RED        ,
+output wire [3:0] GRN        ,
+output wire [3:0] BLU        ,
 
+output wire HSYNC            ,
+output wire VSYNC            ,            
+
+//output wire DeBug_cam_clk    ,
+//output wire DeBug_cam_in_clk ,
 
 input  usb_uart_rxd,
 output  usb_uart_txd
 
     );
-assign DeBug_cam_clk    = cam_clk   ;
-assign DeBug_cam_in_clk = cam_in_clk;
+
+//assign DeBug_cam_clk    = cam_clk   ;
+//assign DeBug_cam_in_clk = cam_in_clk;
 
 wire clk;		//output  clk;
-wire [0:0] rstn;		//output [0:0] rstn;
-//wire SCCB_DATAin = SCCB_DATA;
-wire sccb_clk      ;
-wire sccb_clk_en   ;
-wire sccb_data_out ;
-wire sccb_data_in  ;
-wire sccb_data_en  ;
-
-assign SCCB_CLK  = (sccb_clk_en) ? sccb_clk : 1'b1;
-assign SCCB_DATA = (~sccb_data_en) ? sccb_data_out : 1'bz;
-
-assign sccb_data_in = SCCB_DATA;
-
+wire rstn;		//output [0:0] rstn;
+// Camera reset & PowerDown
 assign cam_pwdn = (Dbun) ? 1'b1 : 1'b0;
 reg [19:0] ResetDelay;
 always @(posedge cam_clk or negedge rstn)
     if (!rstn) ResetDelay <= 20'h00000;
      else if (Dbun == 1'b1) ResetDelay <= 20'h00000;
      else if (ResetDelay == 20'h80000) ResetDelay <= 20'h80000;
-     else ResetDelay <= ResetDelay + 1;
-     
-//assign cam_rstn = (!Dbun) ? 1'b1 : 1'b0;
+     else ResetDelay <= ResetDelay + 1;     
 assign cam_rstn = (ResetDelay == 20'h80000) ? 1'b1 : 1'b0;
-
+// SCCB signals
+wire sccb_clk      ;
+wire sccb_clk_en   ;
+wire sccb_data_out ;
+wire sccb_data_in  ;
+wire sccb_data_en  ;
+assign SCCB_CLK  = (sccb_clk_en) ? sccb_clk : 1'b1;
+assign SCCB_DATA = (~sccb_data_en) ? sccb_data_out : 1'bz;
+assign sccb_data_in = SCCB_DATA;
 
 /////////////////////////////////////////////////
 ////////////    MB SoC System     ///////////////
@@ -116,7 +120,7 @@ wire        Start   ;
 wire        Busy    ;
 wire [31:0] DataOut ;
 wire [31:0] DataIn  ;
-wire [1:0]  WR;
+wire [3:0]  WR;
 wire [15:0] ClockDiv;
 wire [15:0] NegDel  ;
 
@@ -139,32 +143,13 @@ RegisterBlock RegisterBlock_inst
 .Busy    (Busy    ), //input         Busy,
 .DataOut (DataOut ), //output [31:0] DataOut,
 .DataIn  (DataIn  ), //input  [31:0] DataIn,
-.WR      (WR)     ,  //output [1:0]  WR,
+.WR      (WR)     ,  //output [3:0]  WR,
 .ClockDiv(ClockDiv), //output [15:0] ClockDiv
 .NegDel  (NegDel  )  //output [15:0] NegDel
 
 );
 
-//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
-ila_1 APB_ila (
-	.clk(clk), // input wire clk
-
-	.probe0(APB_M_0_paddr  ), // input wire [31:0]  probe0  
-	.probe1(APB_M_0_penable), // input wire [0:0]  probe1 
-	.probe2(APB_M_0_prdata ), // input wire [31:0]  probe2 
-	.probe3(APB_M_0_pready ), // input wire [0:0]  probe3 
-	.probe4(APB_M_0_psel   ), // input wire [0:0]  probe4 
-	.probe5(APB_M_0_pslverr), // input wire [0:0]  probe5 
-	.probe6(APB_M_0_pwdata ), // input wire [31:0]  probe6 
-	.probe7(APB_M_0_pwrite ), // input wire [0:0]  probe7 
-	.probe8(Start), // input wire [0:0]  probe8
-	.probe9(Busy) // input wire [0:0]  probe9
-	);
-
 wire [7:0] ReadData;
-//wire       SCCB_CLK ;
-//wire       SCCB_DATA;
-
 SCCB SCCB_inst(
 .clk (clk ),
 .rstn(rstn),
@@ -183,48 +168,58 @@ SCCB SCCB_inst(
 .sccb_data_out(sccb_data_out),
 .sccb_data_in (sccb_data_in ),
 .sccb_data_en (sccb_data_en )
-
-//.SCCB_CLK (SCCB_CLK ),
-//.SCCB_DATA(SCCB_DATA)
-
-    );
-reg[19:0] WDrstnCount;
-always @(posedge clk or negedge rstn)
-    if (!rstn) WDrstnCount <= 20'h00000;
-     else if (!SCCB_CLK || !sccb_data_in )WDrstnCount <= 20'h00000;
-     else if (WDrstnCount == 20'hfffff) WDrstnCount <= 20'hfffff;
-     else WDrstnCount <= WDrstnCount + 1;
-
-wire WDrstn = (WDrstnCount == 20'hfffff) ? 1'b0 : 1'b1;
-reg [7:0] BitCount;
-always @(negedge SCCB_CLK or negedge WDrstn)
-    if (!WDrstn) BitCount <= 8'h00;
-     else BitCount <= BitCount + 1;
-     
-reg [11:0] GetData;
-always @(posedge SCCB_CLK or negedge WDrstn)
-    if (!WDrstn) GetData <= 12'h000;
-     else GetData <= {GetData[10:0],sccb_data_in};
-
-
-ila_0 your_instance_name (
-	.clk(clk), // input wire clk
-
-	.probe0(sccb_data_en), // input wire [0:0]  probe0  
-	.probe1(SCCB_CLK), // input wire [0:0]  probe1 
-	.probe2(sccb_data_in), // input wire [0:0]  probe2 
-	.probe3(BitCount), // input wire [7:0]  probe3 
-	.probe4(GetData[9:2]), // input wire [7:0]  probe4
-    .probe5 (cam_clk   ), // input wire [0:0]  probe5 
-    .probe6 (cam_in_clk), // input wire [0:0]  probe6 
-    .probe7 (cam_vsynk ), // input wire [0:0]  probe7 
-    .probe8 (cam_href  ), // input wire [0:0]  probe8 
-    .probe9 (cam_data  ), // input wire [7:0]  probe9 
-    .probe10(cam_rstn  ), // input wire [0:0]  probe10 
-    .probe11(cam_pwdn  ) // input wire [0:0]  probe11
-	
 );
-
 assign DataIn = {24'h000000,ReadData};
 
+reg [18:0] writeAdd;
+wire [11:0] writeData;
+wire writeEN = rstn;
+
+always @(posedge clk or negedge rstn)
+    if (!rstn) writeAdd <= 19'h00000;
+     else writeAdd <= writeAdd + 1;
+assign writeData = writeAdd[18:9];
+ 
+//reg [11:0] mem [0:307199];
+reg [11:0] mem [0:153599];
+wire [18:0] ROMadd;
+reg [11:0] ROWdata;
+always @(posedge clk) 
+    if (writeEN) mem[writeAdd] <= writeData;
+always @(posedge clk)
+        ROWdata <= mem[ROMadd];
+
+
+
+
+VGA VGA_inst(
+.clk  (cam_clk  ),
+.rstn (rstn ),
+
+.ROMadd (ROMadd ),
+.ROWdata(ROWdata),
+
+.RED  (RED  ),
+.GRN  (GRN  ),
+.BLU  (BLU  ),
+
+.HSYNC(HSYNC),
+.VSYNC(VSYNC)
+    );
+
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+
+ila_0 your_instance_name (
+	.clk(ila_clk), // input wire clk
+
+	.probe0(SCCB_CLK), // input wire [0:0]  probe0  
+	.probe1(SCCB_DATA), // input wire [0:0]  probe1 
+	.probe2(sccb_clk     ), // input wire [0:0]  probe2 
+	.probe3(sccb_clk_en  ), // input wire [0:0]  probe3 
+	.probe4(sccb_data_out), // input wire [0:0]  probe4 
+	.probe5(sccb_data_in ), // input wire [0:0]  probe5 
+	.probe6(sccb_data_en ), // input wire [0:0]  probe6 
+	.probe7(ReadData) // input wire [7:0]  probe7
+);
+    
 endmodule
