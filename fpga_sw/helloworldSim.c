@@ -65,10 +65,12 @@ int main()
     APB[5] = 0x10; // set SCCB clock to ~200Khz
     APB[6] = 0x0;  // delay from negedge to data
 
-    data = 0x78301255;
+//    data = 0x78301255;
+    data = 0x42056600;
 	 writeSCCB(data);
 	 for (i=0;i<50;i++);
-	data = 0x78301255;
+//	data = 0x78301255;
+	data = 0x42050000;
 	 write4readSCCB(data);
 	 for (i=0;i<10;i++);
 	 Rdata = readSCCB(data);
