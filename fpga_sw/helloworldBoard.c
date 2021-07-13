@@ -57,6 +57,7 @@ u32 *UART = XPAR_UARTLITE_0_BASEADDR;
 int writeSCCB (int WriteData);
 int write4readSCCB (int WriteData);
 int readSCCB (int WriteData);
+void Camera_config();
 
 int main()
 {
@@ -72,6 +73,7 @@ int main()
 	freq = 1000000/(START_FREQ*20);
 	xil_printf("frequency %d \n\r",freq);
 
+	Camera_config();
     while (1)
     {
     	ch = 0;

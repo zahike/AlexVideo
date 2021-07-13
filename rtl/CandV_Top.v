@@ -24,6 +24,8 @@ module CandV_Top(
 input  wire reset            ,
 input  wire sys_clock        ,
 input  wire Dbun             ,
+input  wire Ubun             ,
+input  wire Rbun             ,
 
 // Camera interface 
 output wire SCCB_CLK         ,
@@ -45,16 +47,18 @@ output wire [3:0] BLU        ,
 output wire HSYNC            ,
 output wire VSYNC            ,            
 
-//output wire DeBug_cam_clk    ,
-//output wire DeBug_cam_in_clk ,
+output wire DeBug_cam_clk    ,
+output wire DeBug_cam_in_clk ,
 
 input  usb_uart_rxd,
 output  usb_uart_txd
 
     );
 
-//assign DeBug_cam_clk    = cam_clk   ;
-//assign DeBug_cam_in_clk = cam_in_clk;
+assign DeBug_cam_clk    = cam_clk   ;
+assign DeBug_cam_in_clk = cam_in_clk;
+//assign DeBug_cam_clk    = cam_vsynk   ;
+//assign DeBug_cam_in_clk = VSYNC;
 
 wire clk;		//output  clk;
 wire rstn;		//output [0:0] rstn;
@@ -173,19 +177,57 @@ assign DataIn = {24'h000000,ReadData};
 
 reg [18:0] writeAdd;
 wire [11:0] writeData;
-wire writeEN = rstn;
+//wire writeEN = rstn;
 
-always @(posedge clk or negedge rstn)
+reg TakePic;
+reg PicTaken;
+reg [9:0] LineCount;
+reg [9:0] PicCount;
+
+reg [1:0] DevHsync;
+always @(posedge cam_clk or negedge rstn)
+    if (!rstn) DevHsync <= 2'b00;
+     else DevHsync <= {DevHsync[0],cam_href};
+     
+always @(posedge cam_clk or negedge rstn)
+    if (!rstn) TakePic <= 1'b0;
+     else if (Ubun) TakePic <= 1'b1;
+     else if (Rbun) TakePic <= 1'b0;
+
+always @(posedge cam_clk or negedge rstn)
+    if (!rstn) PicTaken <= 1'b0;
+     else if (!TakePic) PicTaken <= 1'b0;
+     else if (cam_vsynk && (LineCount == 10'h000)) PicTaken <= 1'b1;
+     else if (cam_vsynk) PicTaken <= 1'b0;
+     
+always @(posedge cam_clk or negedge rstn)
+    if (!rstn) LineCount <= 10'h000;
+     else if (!TakePic) LineCount <= 10'h000;
+     else if (PicTaken && (DevHsync == 2'b01)) LineCount <= LineCount + 1;
+     
+reg writeEN;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) writeEN <= 1'b0;
+     else if (!cam_href) writeEN <= 1'b0;
+     else writeEN <= ~writeEN;
+
+reg [3:0] Reg_RED;
+always @(posedge cam_in_clk or negedge rstn)
+    if  (!rstn) Reg_RED <= 4'h0;
+     else Reg_RED <= cam_data[3:0];   
+     
+always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) writeAdd <= 19'h00000;
-     else writeAdd <= writeAdd + 1;
+     else if (!PicTaken) writeAdd <= 19'h00000;
+     else if (writeEN) writeAdd <= writeAdd + 1;
 assign writeData = writeAdd[18:9];
  
 //reg [11:0] mem [0:307199];
 reg [11:0] mem [0:153599];
 wire [18:0] ROMadd;
 reg [11:0] ROWdata;
-always @(posedge clk) 
-    if (writeEN) mem[writeAdd] <= writeData;
+always @(posedge cam_in_clk) 
+    if (writeEN) mem[writeAdd] <= {cam_data[3:0],cam_data[7:4],Reg_RED};
 always @(posedge clk)
         ROWdata <= mem[ROMadd];
 
@@ -207,19 +249,42 @@ VGA VGA_inst(
 .VSYNC(VSYNC)
     );
 
-//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+//output wire       cam_clk    ,
+//input  wire       cam_in_clk ,
+//input  wire       cam_vsynk  ,
+//input  wire       cam_href   ,
+//input  wire [7:0] cam_data   ,
+//output wire       cam_rstn   ,
+//output wire       cam_pwdn   ,
 
-ila_0 your_instance_name (
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+ila_0 Cam_ila (
+	.clk(clk), // input wire clk
+
+	.probe0(cam_in_clk), // input wire [0:0]  probe0  
+	.probe1(cam_vsynk), // input wire [0:0]  probe1 
+	.probe2(cam_href), // input wire [0:0]  probe2 
+	.probe3(cam_data), // input wire [7:0]  probe3 
+	.probe4(TakePic), // input wire [0:0]  probe4 
+	.probe5(PicTaken), // input wire [0:0]  probe5 
+	.probe6(LineCount), // input wire [9:0]  probe6 
+	.probe7(writeEN), // input wire [0:0]  probe7 
+	.probe8(Reg_RED), // input wire [3:0]  probe8 
+	.probe9(writeAdd) // input wire [19:0]  probe9
+);
+
+
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+ila_1 SCCB_ila (
 	.clk(ila_clk), // input wire clk
 
-	.probe0(SCCB_CLK), // input wire [0:0]  probe0  
-	.probe1(SCCB_DATA), // input wire [0:0]  probe1 
-	.probe2(sccb_clk     ), // input wire [0:0]  probe2 
-	.probe3(sccb_clk_en  ), // input wire [0:0]  probe3 
-	.probe4(sccb_data_out), // input wire [0:0]  probe4 
-	.probe5(sccb_data_in ), // input wire [0:0]  probe5 
-	.probe6(sccb_data_en ), // input wire [0:0]  probe6 
-	.probe7(ReadData) // input wire [7:0]  probe7
+
+	.probe0(sccb_clk     ), // input wire [0:0]  probe0  
+	.probe1(sccb_clk_en  ), // input wire [0:0]  probe1 
+	.probe2(sccb_data_out), // input wire [0:0]  probe2 
+	.probe3(sccb_data_in ), // input wire [0:0]  probe3 
+	.probe4(sccb_data_en ), // input wire [0:0]  probe4 
+	.probe5(ReadData) // input wire [7:0]  probe5
 );
     
 endmodule
