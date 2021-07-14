@@ -12,7 +12,7 @@ int writeSCCB (int WriteData)
 	int data;
 
 	APB[4] = 0x0;
-	APB[2] = WriteData;
+	APB[2] = WriteData << 8;
 	APB[0] = 1;
 	data = 1;
 	while (data)

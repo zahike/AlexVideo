@@ -83,6 +83,7 @@ always @(negedge SCCB_CLK)
 assign SCCB_DATA = (SendData) ? ReadData[8] : 1'bz;               
 initial begin
 SendData = 1'b0;
+force CandV_Top_inst.VGA_inst.clk = CandV_Top_inst.ila_clk;
 end
 CandV_Top CandV_Top_inst(
 .reset       (rstn),

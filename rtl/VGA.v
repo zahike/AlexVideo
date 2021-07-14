@@ -26,6 +26,7 @@ input rstn,
 
 output wire [18:0] ROMadd,
 input  wire [11:0] ROWdata,
+output wire ReadMem,
 
 output wire [3:0] RED,
 output wire [3:0] GRN,
@@ -117,7 +118,21 @@ always @(posedge clk or negedge rstn)
      else if (!RegVSYNC) writeData <= 15'h0000;
      else if (writeEN) writeData <= writeData + 1;
 
+///////////////////////
+reg blockLines;
+always @(posedge clk or negedge rstn)
+    if (!rstn) blockLines <= 1'b0;
+     else if (RegLine == 150) blockLines <= 1'b1;
+     else if (RegLine == 390) blockLines <= 1'b0;
      
+reg Reg_readMem;
+always @(posedge clk or negedge rstn)
+    if (!rstn) Reg_readMem <= 1'b0;
+     else if (!blockLines) Reg_readMem <= 1'b0;
+     else if (Couter == 303) Reg_readMem <= 1'b1;
+     else if (Couter == 623) Reg_readMem <= 1'b0;
+
+assign ReadMem = Reg_readMem;
 
 assign HSYNC = RegHSYNC;
 assign VSYNC = RegVSYNC;

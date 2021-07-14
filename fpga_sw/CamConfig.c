@@ -114,7 +114,8 @@ void Camera_config()
 //             writeSCCB(0x426880);
 //             writeSCCB(0x426900);
 //             writeSCCB(0x426A00);
-             writeSCCB(0x426B3A);      // PLL BYPASS
+////             writeSCCB(0x426B3A);      // PLL BYPASS
+             writeSCCB(0x426B4A);      // PLL BYPASS
 //             writeSCCB(0x426C02);
 //             writeSCCB(0x426D55);
 //             writeSCCB(0x426EC0);

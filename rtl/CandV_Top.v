@@ -221,25 +221,34 @@ always @(posedge cam_in_clk or negedge rstn)
      else if (!PicTaken) writeAdd <= 19'h00000;
      else if (writeEN) writeAdd <= writeAdd + 1;
 assign writeData = writeAdd[18:9];
- 
+
+wire ReadMem;
+reg [18:0] ROMadd;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) ROMadd <= 19'h00000;
+     else if (!VSYNC) ROMadd <= 19'h00000;
+     else if (ReadMem) ROMadd <= ROMadd + 1;
+
 //reg [11:0] mem [0:307199];
 reg [11:0] mem [0:153599];
-wire [18:0] ROMadd;
+//wire [18:0] ROMadd;
 reg [11:0] ROWdata;
 always @(posedge cam_in_clk) 
     if (writeEN) mem[writeAdd] <= {cam_data[3:0],cam_data[7:4],Reg_RED};
-always @(posedge clk)
+always @(posedge cam_in_clk)
         ROWdata <= mem[ROMadd];
 
-
+wire [11:0] VGAdata = (ReadMem) ? ROWdata : 12'h000;
 
 
 VGA VGA_inst(
-.clk  (cam_clk  ),
+.clk  (cam_in_clk  ),
 .rstn (rstn ),
 
-.ROMadd (ROMadd ),
-.ROWdata(ROWdata),
+//.ROMadd (ROMadd ),
+.ROMadd ( ),
+.ROWdata(VGAdata),
+.ReadMem(ReadMem),
 
 .RED  (RED  ),
 .GRN  (GRN  ),
@@ -249,31 +258,28 @@ VGA VGA_inst(
 .VSYNC(VSYNC)
     );
 
-//output wire       cam_clk    ,
-//input  wire       cam_in_clk ,
-//input  wire       cam_vsynk  ,
-//input  wire       cam_href   ,
-//input  wire [7:0] cam_data   ,
-//output wire       cam_rstn   ,
-//output wire       cam_pwdn   ,
-
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
 ila_0 Cam_ila (
-	.clk(clk), // input wire clk
+	.clk(ila_clk), // input wire clk
 
-	.probe0(cam_in_clk), // input wire [0:0]  probe0  
-	.probe1(cam_vsynk), // input wire [0:0]  probe1 
-	.probe2(cam_href), // input wire [0:0]  probe2 
-	.probe3(cam_data), // input wire [7:0]  probe3 
-	.probe4(TakePic), // input wire [0:0]  probe4 
-	.probe5(PicTaken), // input wire [0:0]  probe5 
-	.probe6(LineCount), // input wire [9:0]  probe6 
-	.probe7(writeEN), // input wire [0:0]  probe7 
-	.probe8(Reg_RED), // input wire [3:0]  probe8 
-	.probe9(writeAdd) // input wire [19:0]  probe9
+	.probe0 (cam_vsynk ), // input wire [0:0]  probe0  
+	.probe1 (cam_href  ), // input wire [0:0]  probe1 
+	.probe2 (cam_data  ), // input wire [7:0]  probe2 
+	.probe3 (TakePic   ), // input wire [0:0]  probe3 
+	.probe4 (PicTaken  ), // input wire [0:0]  probe4 
+	.probe5 (LineCount ), // input wire [9:0]  probe5 
+	.probe6 (writeEN   ), // input wire [0:0]  probe6 
+	.probe7 (Reg_RED   ), // input wire [3:0]  probe7 
+	.probe8 (writeAdd[17:0]), // input wire [19:0]  probe8 
+	.probe9 (ROMadd[17:0]  ), // input wire [18:0]  probe9 
+	.probe10({BLU,GRN,RED}   ), // input wire [11:0]  probe10 
+	.probe11(HSYNC     ), // input wire [0:0]  probe11 
+	.probe12(VSYNC     ), // input wire [0:0]  probe12
+	.probe13(ReadMem   ) // input wire [0:0]  probe13
+		
 );
 
-
+/*
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
 ila_1 SCCB_ila (
 	.clk(ila_clk), // input wire clk
@@ -286,5 +292,5 @@ ila_1 SCCB_ila (
 	.probe4(sccb_data_en ), // input wire [0:0]  probe4 
 	.probe5(ReadData) // input wire [7:0]  probe5
 );
-    
+    */
 endmodule
