@@ -231,16 +231,51 @@ always @(posedge cam_in_clk or negedge rstn)
      else if (!VSYNC) ROMadd <= 19'h00000;
      else if (ReadMem) ROMadd <= ROMadd + 1;
 
+//wire [11:0] StaticData = 
+//                         (writeAdd == 19'd00000) ? 12'hfff :
+////                         (writeAdd == 19'd00001) ? 12'hfff :
+////                         (writeAdd == 19'd00002) ? 12'hfff :
+////                         (writeAdd == 19'd00003) ? 12'hfff :
+//                         (writeAdd == 19'd00639) ? 12'hfff :
+////                         (writeAdd == 19'd00638) ? 12'hfff :
+////                         (writeAdd == 19'd00637) ? 12'hfff :
+////                         (writeAdd == 19'd00636) ? 12'hfff :
+////                         (writeAdd == 19'd01279) ? 12'hfff :
+////                         (writeAdd == 19'd01280) ? 12'hfff :
+////                         (writeAdd == 19'd01919) ? 12'hfff :
+////                         (writeAdd == 19'd01910) ? 12'hfff :
+////                         (writeAdd == 19'd304639) ? 12'hfff :
+////                         (writeAdd == 19'd304640) ? 12'hfff :
+////                         (writeAdd == 19'd305279) ? 12'hfff :
+////                         (writeAdd == 19'd305280) ? 12'hfff :
+////                         (writeAdd == 19'd305919) ? 12'hfff :
+////                         (writeAdd == 19'd305920) ? 12'hfff :
+////                         (writeAdd == 19'd306559) ? 12'hfff :                         
+//                         (writeAdd == 19'd306560) ? 12'hfff :
+////                         (writeAdd == 19'd306561) ? 12'hfff :
+////                         (writeAdd == 19'd306562) ? 12'hfff :
+////                         (writeAdd == 19'd306563) ? 12'hfff :                         
+////                         (writeAdd == 19'd307196) ? 12'hfff :
+////                         (writeAdd == 19'd307197) ? 12'hfff :
+////                         (writeAdd == 19'd307198) ? 12'hfff :
+//                         (writeAdd == 19'd307199) ? 12'hfff : 12'h00f;
+
 reg [11:0] mem [0:307199];
 //reg [11:0] mem [0:153599];
 //wire [18:0] ROMadd;
 reg [11:0] ROWdata;
 always @(posedge cam_in_clk) 
     if (writeEN) mem[writeAdd] <= {cam_data[3:0],cam_data[7:4],Reg_RED};
+//always @(posedge cam_in_clk) 
+//    if (writeEN) mem[writeAdd] <= StaticData;
 always @(posedge cam_in_clk)
         ROWdata <= mem[ROMadd];
 
-wire [11:0] VGAdata = (ReadMem) ? ROWdata : 12'h000;
+reg SendVGA;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) SendVGA <= 1'b0;
+     else SendVGA <= ReadMem;
+wire [11:0] VGAdata = (SendVGA) ? ROWdata : 12'h000;
 
 
 VGA VGA_inst(

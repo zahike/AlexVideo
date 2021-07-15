@@ -122,23 +122,32 @@ always @(posedge clk or negedge rstn)
 reg blockLines;
 always @(posedge clk or negedge rstn)
     if (!rstn) blockLines <= 1'b0;
-     else if (RegLine == 30) blockLines <= 1'b1;
-     else if (RegLine == 510) blockLines <= 1'b0;
+     else if (RegLine == 31) blockLines <= 1'b1;
+     else if (RegLine == 511) blockLines <= 1'b0;
      
 reg Reg_readMem;
 always @(posedge clk or negedge rstn)
     if (!rstn) Reg_readMem <= 1'b0;
      else if (!blockLines) Reg_readMem <= 1'b0;
-     else if (Couter == 143) Reg_readMem <= 1'b1;
-     else if (Couter == 783) Reg_readMem <= 1'b0;
+     else if (Couter == 142) Reg_readMem <= 1'b1;
+     else if (Couter == 782) Reg_readMem <= 1'b0;
 
 assign ReadMem = Reg_readMem;
 
 assign HSYNC = RegHSYNC;
 assign VSYNC = RegVSYNC;
 
+//wire [11:0] StaticData = 
+//                         ((Couter == 144) && (RegLine == 31 )) ? 12'hfff :
+//                         ((Couter == 783) && (RegLine == 31 )) ? 12'hfff :
+//                         ((Couter == 144) && (RegLine == 510 )) ? 12'hfff :
+//                         ((Couter == 783) && (RegLine == 510 )) ? 12'hfff : 12'h00f;
+
 assign RED = (!RegHTdisp) ? 4'h0 : ROWdata[3:0];
 assign GRN = (!RegHTdisp) ? 4'h0 : ROWdata[7:4];
 assign BLU = (!RegHTdisp) ? 4'h0 : ROWdata[11:8];
+//assign RED = (!RegHTdisp) ? 4'h0 : StaticData[3:0];
+//assign GRN = (!RegHTdisp) ? 4'h0 : StaticData[7:4];
+//assign BLU = (!RegHTdisp) ? 4'h0 : StaticData[11:8];
     
 endmodule
