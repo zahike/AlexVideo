@@ -202,8 +202,10 @@ always @(posedge cam_clk or negedge rstn)
      
 always @(posedge cam_clk or negedge rstn)
     if (!rstn) LineCount <= 10'h000;
-     else if (!TakePic) LineCount <= 10'h000;
-     else if (PicTaken && (DevHsync == 2'b01)) LineCount <= LineCount + 1;
+//     else if (!TakePic) LineCount <= 10'h000;
+//    else if (PicTaken && (DevHsync == 2'b01)) LineCount <= LineCount + 1;
+     else if (cam_vsynk) LineCount <= 10'h000;
+     else if (DevHsync == 2'b01) LineCount <= LineCount + 1;
      
 reg writeEN;
 always @(posedge cam_in_clk or negedge rstn)
@@ -218,7 +220,7 @@ always @(posedge cam_in_clk or negedge rstn)
      
 always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) writeAdd <= 19'h00000;
-     else if (!PicTaken) writeAdd <= 19'h00000;
+     else if (cam_vsynk) writeAdd <= 19'h00000;
      else if (writeEN) writeAdd <= writeAdd + 1;
 assign writeData = writeAdd[18:9];
 
@@ -229,8 +231,8 @@ always @(posedge cam_in_clk or negedge rstn)
      else if (!VSYNC) ROMadd <= 19'h00000;
      else if (ReadMem) ROMadd <= ROMadd + 1;
 
-//reg [11:0] mem [0:307199];
-reg [11:0] mem [0:153599];
+reg [11:0] mem [0:307199];
+//reg [11:0] mem [0:153599];
 //wire [18:0] ROMadd;
 reg [11:0] ROWdata;
 always @(posedge cam_in_clk) 
@@ -257,7 +259,7 @@ VGA VGA_inst(
 .HSYNC(HSYNC),
 .VSYNC(VSYNC)
     );
-
+/*
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
 ila_0 Cam_ila (
 	.clk(ila_clk), // input wire clk

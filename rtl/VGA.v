@@ -122,15 +122,15 @@ always @(posedge clk or negedge rstn)
 reg blockLines;
 always @(posedge clk or negedge rstn)
     if (!rstn) blockLines <= 1'b0;
-     else if (RegLine == 150) blockLines <= 1'b1;
-     else if (RegLine == 390) blockLines <= 1'b0;
+     else if (RegLine == 30) blockLines <= 1'b1;
+     else if (RegLine == 510) blockLines <= 1'b0;
      
 reg Reg_readMem;
 always @(posedge clk or negedge rstn)
     if (!rstn) Reg_readMem <= 1'b0;
      else if (!blockLines) Reg_readMem <= 1'b0;
-     else if (Couter == 303) Reg_readMem <= 1'b1;
-     else if (Couter == 623) Reg_readMem <= 1'b0;
+     else if (Couter == 143) Reg_readMem <= 1'b1;
+     else if (Couter == 783) Reg_readMem <= 1'b0;
 
 assign ReadMem = Reg_readMem;
 
