@@ -176,36 +176,43 @@ SCCB SCCB_inst(
 assign DataIn = {24'h000000,ReadData};
 
 reg [18:0] writeAdd;
-wire [11:0] writeData;
+//wire [11:0] writeData;
 //wire writeEN = rstn;
 
-reg TakePic;
-reg PicTaken;
+//reg TakePic;
+//reg PicTaken;
 reg [9:0] LineCount;
-reg [9:0] PicCount;
 
 reg [1:0] DevHsync;
-always @(posedge cam_clk or negedge rstn)
+always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) DevHsync <= 2'b00;
      else DevHsync <= {DevHsync[0],cam_href};
-     
-always @(posedge cam_clk or negedge rstn)
-    if (!rstn) TakePic <= 1'b0;
-     else if (Ubun) TakePic <= 1'b1;
-     else if (Rbun) TakePic <= 1'b0;
+wire SyncCamHsyncUP = (DevHsync == 2'b01) ? 1'b1 :1'b0;
+wire SyncCamHsyncDO = (DevHsync == 2'b10) ? 1'b1 :1'b0;
 
-always @(posedge cam_clk or negedge rstn)
-    if (!rstn) PicTaken <= 1'b0;
-     else if (!TakePic) PicTaken <= 1'b0;
-     else if (cam_vsynk && (LineCount == 10'h000)) PicTaken <= 1'b1;
-     else if (cam_vsynk) PicTaken <= 1'b0;
+reg [1:0] DevCamVsync;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) DevCamVsync <= 2'b00;
+     else DevCamVsync <= {DevCamVsync[0],cam_vsynk};
+wire SyncCamVsync = (DevCamVsync == 2'b01) ? 1'b1 :1'b0;
      
-always @(posedge cam_clk or negedge rstn)
+//always @(posedge cam_clk or negedge rstn)
+//    if (!rstn) TakePic <= 1'b0;
+//     else if (Ubun) TakePic <= 1'b1;
+//     else if (Rbun) TakePic <= 1'b0;
+
+//always @(posedge cam_clk or negedge rstn)
+//    if (!rstn) PicTaken <= 1'b0;
+//     else if (!TakePic) PicTaken <= 1'b0;
+//     else if (cam_vsynk && (LineCount == 10'h000)) PicTaken <= 1'b1;
+//     else if (cam_vsynk) PicTaken <= 1'b0;
+     
+always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) LineCount <= 10'h000;
 //     else if (!TakePic) LineCount <= 10'h000;
-//    else if (PicTaken && (DevHsync == 2'b01)) LineCount <= LineCount + 1;
+//    else if (PicTaken && (SyncCamHsyncUP)) LineCount <= LineCount + 1;
      else if (cam_vsynk) LineCount <= 10'h000;
-     else if (DevHsync == 2'b01) LineCount <= LineCount + 1;
+     else if (SyncCamHsyncUP) LineCount <= LineCount + 1;
      
 reg writeEN;
 always @(posedge cam_in_clk or negedge rstn)
@@ -218,17 +225,17 @@ always @(posedge cam_in_clk or negedge rstn)
     if  (!rstn) Reg_RED <= 4'h0;
      else Reg_RED <= cam_data[3:0];   
      
-always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) writeAdd <= 19'h00000;
-     else if (cam_vsynk) writeAdd <= 19'h00000;
-     else if (writeEN) writeAdd <= writeAdd + 1;
-assign writeData = writeAdd[18:9];
+//always @(posedge cam_in_clk or negedge rstn)
+//    if (!rstn) writeAdd <= 19'h00000;
+//     else if (cam_vsynk) writeAdd <= 19'h00000;
+//     else if (writeEN) writeAdd <= writeAdd + 1;
+//assign writeData = writeAdd[18:9];
 
 wire ReadMem;
-reg [18:0] ROMadd;
+reg [19:0] ROMadd;
 always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) ROMadd <= 19'h00000;
-     else if (!VSYNC) ROMadd <= 19'h00000;
+    if (!rstn) ROMadd <= 20'h00000;
+     else if (!VSYNC) ROMadd <= 20'h00000;
      else if (ReadMem) ROMadd <= ROMadd + 1;
 
 //wire [11:0] StaticData = 
@@ -266,24 +273,32 @@ always @(posedge cam_in_clk or negedge rstn)
      else if (StaticAdd == 307199) StaticAdd <= 19'h00000;
      else StaticAdd <= StaticAdd + 1;  
 
+wire [11:0] Data2RAM = {cam_data[3:0],cam_data[7:4],Reg_RED};
+reg bCamData;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) bCamData <= 1'b0;
+     else if (SyncCamVsync) bCamData <= ~bCamData;
+     else if (SyncCamHsyncDO) bCamData <= ~bCamData;
+     else if (writeEN) bCamData <= ~bCamData;
 
-reg [11:0] mem [0:307199];
-//reg [11:0] mem [0:153599];
+wire WriteAfterBlock = writeEN && bCamData;
+
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) writeAdd <= 19'h00000;
+     else if (cam_vsynk) writeAdd <= 19'h00000;
+     else if (WriteAfterBlock) writeAdd <= writeAdd + 1;
+
+//reg [11:0] mem [0:307199];
+reg [11:0] mem [0:153599];
 //wire [18:0] ROMadd;
 reg [11:0] ROWdata;
+//wire ReadRAMadd = ROMadd[20:1]
 always @(posedge cam_in_clk) 
-    if (writeEN) mem[writeAdd] <= {cam_data[3:0],cam_data[7:4],Reg_RED};
+    if (WriteAfterBlock) mem[writeAdd] <= Data2RAM;
 //always @(posedge cam_in_clk) 
 //    if (rstn) mem[StaticAdd] <= StaticAdd[11:0];
 always @(posedge cam_in_clk)
-        ROWdata <= mem[ROMadd];
-
-reg [1:0] DevCamVsync;
-always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) DevCamVsync <= 2'b00;
-     else DevCamVsync <= {DevCamVsync[0],cam_vsynk};
-
-wire SyncCamVsync = (DevCamVsync == 2'b01) ? 1'b1 :1'b0;
+        ROWdata <= mem[ROMadd[19:1]];
 
 reg [1:0] DevVSYNC;
 always @(posedge cam_in_clk or negedge rstn)
@@ -330,13 +345,13 @@ always @(posedge ila_clk or negedge rstn)
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
      ila_0 Cam_ila (
          .clk(ila_clk), // input wire clk
-     
-         .probe0(cam_vsynk), // input wire [0:0]  probe0  
+ 
+ 	     .probe0(cam_vsynk), // input wire [0:0]  probe0  
          .probe1(cam_href ), // input wire [0:0]  probe1 
-         .probe2(cam_data), // input wire [7:0]  probe2 
-         .probe3(CamTimeCount), // input wire [31:0]  probe3
-	     .probe4(LineCount), // input wire [9:0]  probe4
-	     .probe5(VSYNC) // input wire [0:0]  probe5
+         .probe2(writeAdd), // input wire [19:0]  probe2 
+         .probe3(VSYNC), // input wire [0:0]  probe3 
+         .probe4(HSYNC), // input wire [0:0]  probe4 
+         .probe5(ROMadd) // input wire [19:0]  probe5
      );
      
 /*

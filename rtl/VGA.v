@@ -100,8 +100,10 @@ reg Reg_readMem;
 always @(posedge clk or negedge rstn)
     if (!rstn) Reg_readMem <= 1'b0;
      else if (!blockLines) Reg_readMem <= 1'b0;
-     else if (Couter == 142) Reg_readMem <= 1'b1;
-     else if (Couter == 782) Reg_readMem <= 1'b0;
+//     else if (Couter == 142) Reg_readMem <= 1'b1;
+     else if (Couter == 120) Reg_readMem <= 1'b1;
+//     else if (Couter == 782) Reg_readMem <= 1'b0;
+     else if (Couter == 760) Reg_readMem <= 1'b0;
 
 assign ReadMem = Reg_readMem;
 
