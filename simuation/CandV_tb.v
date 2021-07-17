@@ -83,11 +83,68 @@ always @(negedge SCCB_CLK)
 assign SCCB_DATA = (SendData) ? ReadData[8] : 1'bz;               
 initial begin
 SendData = 1'b0;
-force CandV_Top_inst.VGA_inst.clk = CandV_Top_inst.ila_clk;
+//force CandV_Top_inst.cam_in_clk = CandV_Top_inst.ila_clk;
 end
+
+wire       cam_in_clk ;
+wire        cam_vsynk  ;
+wire        cam_href   ;
+wire [7:0]  cam_data   ;
+
+reg [1:0] DevClk;
+always @(posedge clk or negedge rstn)
+    if (!rstn) DevClk <= 2'b00;
+     else DevClk <= DevClk + 1;
+assign cam_in_clk =  DevClk[1];
+reg [31:0] TimeCounter;
+always @(posedge cam_in_clk or negedge rstn) 
+    if (!rstn) TimeCounter <= 833570;
+     else if (TimeCounter == 833599) TimeCounter <= 32'h00000000;
+     else TimeCounter<= TimeCounter + 1;
+
+reg RegCamVsync;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) RegCamVsync <= 1'b0;
+     else if (TimeCounter == 833597) RegCamVsync <= 1'b1;
+     else if (TimeCounter == 4797) RegCamVsync <= 1'b0;
+
+reg RegCamDisp;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) RegCamDisp <= 1'b0;
+     else if (TimeCounter == 49870) RegCamDisp <= 1'b1;
+     else if (TimeCounter == 817870) RegCamDisp <= 1'b0;
+
+reg [11:0] RegHsyncCount;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) RegHsyncCount <= 12'h000;
+     else if (!RegCamDisp) RegHsyncCount <= 12'h000;
+     else if (RegHsyncCount == 1599) RegHsyncCount <= 12'h000;
+     else RegHsyncCount <= RegHsyncCount + 1;   
+
+reg RegCamHsync;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) RegCamHsync <= 1'b0;
+     else if (!RegCamDisp) RegCamHsync <= 1'b0;
+     else if (RegHsyncCount == 0) RegCamHsync <= 1'b1;      
+     else if (RegHsyncCount == 1280) RegCamHsync <= 1'b0;      
+            
+assign cam_vsynk = RegCamVsync;
+assign cam_href = RegCamHsync;
+assign cam_data = (RegCamHsync) ? TimeCounter[7:0] : 8'h00;
+     
+initial begin
+@(rstn);
+#100;
+ 
+end 
 CandV_Top CandV_Top_inst(
 .reset       (rstn),
 .sys_clock   (clk),
+
+.cam_in_clk (cam_in_clk),
+.cam_vsynk  (cam_vsynk ),
+.cam_href   (cam_href  ),
+.cam_data   (cam_data  ),
 
 .SCCB_CLK    (SCCB_CLK) ,
 .SCCB_DATA   (SCCB_DATA)

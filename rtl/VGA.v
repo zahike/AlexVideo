@@ -24,7 +24,7 @@ module VGA(
 input clk,
 input rstn,
 
-output wire [18:0] ROMadd,
+input SyncVsync,
 input  wire [11:0] ROWdata,
 output wire ReadMem,
 
@@ -42,83 +42,54 @@ reg        RegVSYNC ;
 reg        RegVTdisp;
 reg        RegHSYNC ;
 reg        RegHTdisp;
+reg [11:0] Couter;
 reg [11:0] RegLine  ;
 
+
+// Counters
 always @(posedge clk or negedge rstn)
-    if (!rstn) RegVSYNC <= 1'b1;
-     else if (Start && (RegLine == 12'd520)) RegVSYNC <= 1'b0;
-     else if (Start && (RegLine == 12'd001)) RegVSYNC <= 1'b1;
+    if (!rstn) Couter <= 12'h000;
+     else if (SyncVsync) Couter <= 12'h000;
+     else if (Couter == 12'd799) Couter <= 12'h000;
+     else Couter <= Couter + 1;
+	 
+assign Start = (Couter == 12'd799) ? 1'b1 : 1'b0;
 
 always @(posedge clk or negedge rstn)
     if (!rstn) RegLine <= 12'h000;
+     else if (SyncVsync) RegLine <= 12'h000;
      else if (Start && (RegLine == 12'd520)) RegLine <= 12'h000;
      else if (Start) RegLine <= RegLine + 1;
+
+// signal genratuion 
+always @(posedge clk or negedge rstn)
+    if (!rstn) RegHSYNC <= 1'b1;
+     else if (Start) RegHSYNC <= 1'b0;
+     else if (Couter == 12'd95) RegHSYNC <= 1'b1;
+     else if (Couter == 12'd784) RegHSYNC <= 1'b0;
+
+always @(posedge clk or negedge rstn)
+    if (!rstn) RegVSYNC <= 1'b0;
+     else if (SyncVsync)  RegVSYNC <= 1'b0;
+     else if (Start && (RegLine == 12'd520)) RegVSYNC <= 1'b0;
+     else if (Start && (RegLine == 12'd001)) RegVSYNC <= 1'b1;
 
 always @(posedge clk or negedge rstn)
     if (!rstn) RegVTdisp <= 1'b0;
      else if (Start &&(RegLine == 12'd30)) RegVTdisp <= 1'b1;
      else if (Start &&(RegLine == 12'd510)) RegVTdisp <= 1'b0;
-     
-reg [11:0] Couter;
-always @(posedge clk or negedge rstn)
-    if (!rstn) Couter <= 12'h000;
-     else if (Couter == 12'd799) Couter <= 12'h000;
-     else Couter <= Couter + 1;
-     
-assign Start = (Couter == 12'd799) ? 1'b1 : 1'b0;
-
-always @(posedge clk or negedge rstn)
-    if (!rstn) RegHSYNC <= 1'b1;
-     else if (Start) RegHSYNC <= 1'b0;
-     else if (Couter == 12'd95) RegHSYNC <= 1'b1;
 
 always @(posedge clk or negedge rstn)
     if (!rstn) RegHTdisp <= 1'b0;
      else if (Couter == 12'd143) RegHTdisp <= 1'b1;
      else if (Couter == 12'd783) RegHTdisp <= 1'b0;
      
-reg [18:0] RegROMadd;
-always @(posedge clk or negedge rstn)
-    if (!rstn) RegROMadd <= 19'h00000;
-     else if (!RegVSYNC) RegROMadd <= 19'h00000;
-     else if (RegVTdisp && RegHTdisp) RegROMadd <= RegROMadd + 1;
-
-assign ROMadd = RegROMadd;
-
 reg writeEN;
 always @(posedge clk or negedge rstn)
     if (!rstn) writeEN <= 1'b0;
      else writeEN <= RegVTdisp && RegHTdisp;          
-reg [18:0] writeAdd;
-always @(posedge clk or negedge rstn)
-    if (!rstn) writeAdd <= 19'h00000;
-     else writeAdd <= ROMadd;    
-     
-reg [18:0] EOLadd;
-always @(posedge clk or negedge rstn)
-    if (!rstn) EOLadd <= 19'd639;
-     else if (writeAdd == 307199) EOLadd <= 19'd639;
-     else if (writeAdd == EOLadd) EOLadd <= EOLadd + 19'd640;
 
-reg switchFrame;
-always @(posedge clk or negedge rstn)   
-    if (!rstn) switchFrame <= 1'b0;
-     else if (Start && (RegLine == 12'h000)) switchFrame <= ~switchFrame;
-reg LineOn;
-always @(posedge clk or negedge rstn)
-    if (!rstn) LineOn <= 1'b0;
-     else if (!RegVSYNC) LineOn <= switchFrame;
-     else if (RegVTdisp && Start) LineOn <= ~LineOn; 
-
-wire [14:0] LineDataON  = (LineOn) ? 15'h000f : 15'h0000;       
-wire [14:0] LineDataOFF = (LineOn) ? 15'h0000 : 15'h000f;       
-reg [14:0] writeData;
-always @(posedge clk or negedge rstn)
-    if (!rstn) writeData <= 15'h0000;
-     else if (!RegVSYNC) writeData <= 15'h0000;
-     else if (writeEN) writeData <= writeData + 1;
-
-///////////////////////
+// read Mem signal
 reg blockLines;
 always @(posedge clk or negedge rstn)
     if (!rstn) blockLines <= 1'b0;

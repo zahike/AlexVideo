@@ -260,6 +260,13 @@ always @(posedge cam_in_clk or negedge rstn)
 ////                         (writeAdd == 19'd307198) ? 12'hfff :
 //                         (writeAdd == 19'd307199) ? 12'hfff : 12'h00f;
 
+reg [18:0] StaticAdd;
+always @(posedge cam_in_clk or negedge rstn) 
+    if (!rstn) StaticAdd <= 19'h00000;
+     else if (StaticAdd == 307199) StaticAdd <= 19'h00000;
+     else StaticAdd <= StaticAdd + 1;  
+
+
 reg [11:0] mem [0:307199];
 //reg [11:0] mem [0:153599];
 //wire [18:0] ROMadd;
@@ -267,23 +274,42 @@ reg [11:0] ROWdata;
 always @(posedge cam_in_clk) 
     if (writeEN) mem[writeAdd] <= {cam_data[3:0],cam_data[7:4],Reg_RED};
 //always @(posedge cam_in_clk) 
-//    if (writeEN) mem[writeAdd] <= StaticData;
+//    if (rstn) mem[StaticAdd] <= StaticAdd[11:0];
 always @(posedge cam_in_clk)
         ROWdata <= mem[ROMadd];
+
+reg [1:0] DevCamVsync;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) DevCamVsync <= 2'b00;
+     else DevCamVsync <= {DevCamVsync[0],cam_vsynk};
+
+wire SyncCamVsync = (DevCamVsync == 2'b01) ? 1'b1 :1'b0;
+
+reg [1:0] DevVSYNC;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) DevVSYNC <= 2'b00;
+     else DevVSYNC <= {DevVSYNC[0],VSYNC};
+
+wire SyncVGAVSYNC = (DevVSYNC == 2'b01) ? 1'b1 :1'b0;
 
 reg SendVGA;
 always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) SendVGA <= 1'b0;
      else SendVGA <= ReadMem;
-wire [11:0] VGAdata = (SendVGA) ? ROWdata : 12'h000;
+reg bVGA;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) bVGA <= 1'b0;
+     else if (SyncVGAVSYNC) bVGA <= ~bVGA;
+     else if (!SendVGA && ReadMem) bVGA <= ~bVGA;
+     else if (SendVGA) bVGA <= ~bVGA; 
+wire [11:0] VGAdata = (SendVGA && !bVGA) ? ROWdata : 12'h000;
 
-
+     
 VGA VGA_inst(
 .clk  (cam_in_clk  ),
 .rstn (rstn ),
 
-//.ROMadd (ROMadd ),
-.ROMadd ( ),
+.SyncVsync(SyncCamVsync),
 .ROWdata(VGAdata),
 .ReadMem(ReadMem),
 
@@ -294,6 +320,25 @@ VGA VGA_inst(
 .HSYNC(HSYNC),
 .VSYNC(VSYNC)
     );
+    
+reg [31:0] CamTimeCount;
+always @(posedge ila_clk or negedge rstn)
+    if (!rstn) CamTimeCount <= 32'h00000000;
+     else if (SyncCamVsync) CamTimeCount <= 32'h00000000;
+     else CamTimeCount <= CamTimeCount + 1;
+     
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+     ila_0 Cam_ila (
+         .clk(ila_clk), // input wire clk
+     
+         .probe0(cam_vsynk), // input wire [0:0]  probe0  
+         .probe1(cam_href ), // input wire [0:0]  probe1 
+         .probe2(cam_data), // input wire [7:0]  probe2 
+         .probe3(CamTimeCount), // input wire [31:0]  probe3
+	     .probe4(LineCount), // input wire [9:0]  probe4
+	     .probe5(VSYNC) // input wire [0:0]  probe5
+     );
+     
 /*
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
 ila_0 Cam_ila (
