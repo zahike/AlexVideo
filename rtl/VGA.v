@@ -25,8 +25,9 @@ input clk,
 input rstn,
 
 input SyncVsync,
-input  wire [11:0] ROWdata,
-output wire ReadMem,
+output wire [18:0] ReadAdd,
+input  wire [11:0] ReadData,
+//output wire ReadMem,
 
 output wire [3:0] RED,
 output wire [3:0] GRN,
@@ -39,10 +40,8 @@ output wire VSYNC
     
 wire       Start    ;
 reg        RegVSYNC ;
-reg        RegVTdisp;
 reg        RegHSYNC ;
-reg        RegHTdisp;
-reg [11:0] Couter;
+reg [11:0] Couter   ;
 reg [11:0] RegLine  ;
 
 
@@ -74,20 +73,8 @@ always @(posedge clk or negedge rstn)
      else if (Start && (RegLine == 12'd520)) RegVSYNC <= 1'b0;
      else if (Start && (RegLine == 12'd001)) RegVSYNC <= 1'b1;
 
-always @(posedge clk or negedge rstn)
-    if (!rstn) RegVTdisp <= 1'b0;
-     else if (Start &&(RegLine == 12'd30)) RegVTdisp <= 1'b1;
-     else if (Start &&(RegLine == 12'd510)) RegVTdisp <= 1'b0;
-
-always @(posedge clk or negedge rstn)
-    if (!rstn) RegHTdisp <= 1'b0;
-     else if (Couter == 12'd143) RegHTdisp <= 1'b1;
-     else if (Couter == 12'd783) RegHTdisp <= 1'b0;
-     
-reg writeEN;
-always @(posedge clk or negedge rstn)
-    if (!rstn) writeEN <= 1'b0;
-     else writeEN <= RegVTdisp && RegHTdisp;          
+assign HSYNC = RegHSYNC;
+assign VSYNC = RegVSYNC;
 
 // read Mem signal
 reg blockLines;
@@ -101,14 +88,29 @@ always @(posedge clk or negedge rstn)
     if (!rstn) Reg_readMem <= 1'b0;
      else if (!blockLines) Reg_readMem <= 1'b0;
 //     else if (Couter == 142) Reg_readMem <= 1'b1;
-     else if (Couter == 120) Reg_readMem <= 1'b1;
+     else if (Couter == 110) Reg_readMem <= 1'b1;
 //     else if (Couter == 782) Reg_readMem <= 1'b0;
-     else if (Couter == 760) Reg_readMem <= 1'b0;
+     else if (Couter == 750) Reg_readMem <= 1'b0;
 
-assign ReadMem = Reg_readMem;
+//wire ReadMem;
+reg [19:0] Reg_ReadAdd;
+always @(posedge clk or negedge rstn)
+    if (!rstn) Reg_ReadAdd <= 20'h00000;
+     else if (!VSYNC) Reg_ReadAdd <= 20'h00000;
+     else if (Reg_readMem) Reg_ReadAdd <= Reg_ReadAdd + 1;
+assign ReadAdd = Reg_ReadAdd[19:1];
 
-assign HSYNC = RegHSYNC;
-assign VSYNC = RegVSYNC;
+reg SendVGA;
+always @(posedge clk or negedge rstn)
+    if (!rstn) SendVGA <= 1'b0;
+     else SendVGA <= Reg_readMem;
+reg bVGA;
+always @(posedge clk or negedge rstn)
+    if (!rstn) bVGA <= 1'b0;
+     else if (SyncVsync) bVGA <= ~bVGA;
+     else if (!SendVGA && Reg_readMem) bVGA <= ~bVGA;
+     else if (SendVGA) bVGA <= ~bVGA; 
+wire [11:0] VGAdata = (SendVGA && !bVGA) ? ReadData : 12'h000;
 
 //wire [11:0] StaticData = 
 //                         ((Couter == 144) && (RegLine == 31 )) ? 12'hfff :
@@ -116,11 +118,11 @@ assign VSYNC = RegVSYNC;
 //                         ((Couter == 144) && (RegLine == 510 )) ? 12'hfff :
 //                         ((Couter == 783) && (RegLine == 510 )) ? 12'hfff : 12'h00f;
 
-assign RED = (!RegHTdisp) ? 4'h0 : ROWdata[3:0];
-assign GRN = (!RegHTdisp) ? 4'h0 : ROWdata[7:4];
-assign BLU = (!RegHTdisp) ? 4'h0 : ROWdata[11:8];
-//assign RED = (!RegHTdisp) ? 4'h0 : StaticData[3:0];
-//assign GRN = (!RegHTdisp) ? 4'h0 : StaticData[7:4];
-//assign BLU = (!RegHTdisp) ? 4'h0 : StaticData[11:8];
+assign RED = (SendVGA) ?  VGAdata[3:0]  : 4'h0;
+assign GRN = (SendVGA) ?  VGAdata[7:4]  : 4'h0;
+assign BLU = (SendVGA) ?  VGAdata[11:8] : 4'h0;
+//assign RED = (SendVGA) ? StaticData[3:0]  : 4'h0;
+//assign GRN = (SendVGA) ? StaticData[7:4]  : 4'h0;
+//assign BLU = (SendVGA) ? StaticData[11:8] : 4'h0;
     
 endmodule

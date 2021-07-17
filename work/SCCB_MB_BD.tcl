@@ -124,7 +124,6 @@ if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_apb_bridge:3.0\
 xilinx.com:ip:axi_uartlite:2.0\
-xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:mdm:3.2\
 xilinx.com:ip:microblaze:10.0\
 xilinx.com:ip:proc_sys_reset:5.0\
@@ -281,19 +280,17 @@ proc create_root_design { parentCell } {
   set usb_uart [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:uart_rtl:1.0 usb_uart ]
 
   # Create ports
-  set cam_clk [ create_bd_port -dir O -type clk cam_clk ]
-  set clk [ create_bd_port -dir O -type clk clk ]
-  set ila_clk [ create_bd_port -dir O -type clk ila_clk ]
+  set Clk [ create_bd_port -dir I -type clk Clk ]
+  set_property -dict [ list \
+   CONFIG.CLK_DOMAIN {/clk_wiz_0_clk_out1} \
+   CONFIG.FREQ_HZ {100000000} \
+   CONFIG.PHASE {0.0} \
+ ] $Clk
   set reset [ create_bd_port -dir I -type rst reset ]
   set_property -dict [ list \
    CONFIG.POLARITY {ACTIVE_LOW} \
  ] $reset
   set rstn [ create_bd_port -dir O -from 0 -to 0 -type rst rstn ]
-  set sys_clock [ create_bd_port -dir I -type clk sys_clock ]
-  set_property -dict [ list \
-   CONFIG.FREQ_HZ {100000000} \
-   CONFIG.PHASE {0.000} \
- ] $sys_clock
 
   # Create instance: axi_apb_bridge_0, and set properties
   set axi_apb_bridge_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_apb_bridge:3.0 axi_apb_bridge_0 ]
@@ -308,32 +305,6 @@ proc create_root_design { parentCell } {
    CONFIG.UARTLITE_BOARD_INTERFACE {usb_uart} \
    CONFIG.USE_BOARD_FLOW {true} \
  ] $axi_uartlite_0
-
-  # Create instance: clk_wiz_0, and set properties
-  set clk_wiz_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0 ]
-  set_property -dict [ list \
-   CONFIG.CLKOUT1_JITTER {130.958} \
-   CONFIG.CLKOUT1_PHASE_ERROR {98.575} \
-   CONFIG.CLKOUT2_JITTER {200.764} \
-   CONFIG.CLKOUT2_PHASE_ERROR {98.575} \
-   CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {12.5} \
-   CONFIG.CLKOUT2_USED {true} \
-   CONFIG.CLKOUT3_JITTER {175.402} \
-   CONFIG.CLKOUT3_PHASE_ERROR {98.575} \
-   CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {25} \
-   CONFIG.CLKOUT3_USED {true} \
-   CONFIG.CLK_IN1_BOARD_INTERFACE {sys_clock} \
-   CONFIG.MMCM_CLKFBOUT_MULT_F {10.000} \
-   CONFIG.MMCM_CLKOUT0_DIVIDE_F {10.000} \
-   CONFIG.MMCM_CLKOUT1_DIVIDE {80} \
-   CONFIG.MMCM_CLKOUT2_DIVIDE {40} \
-   CONFIG.MMCM_DIVCLK_DIVIDE {1} \
-   CONFIG.NUM_OUT_CLKS {3} \
-   CONFIG.RESET_BOARD_INTERFACE {reset} \
-   CONFIG.RESET_PORT {resetn} \
-   CONFIG.RESET_TYPE {ACTIVE_LOW} \
-   CONFIG.USE_BOARD_FLOW {true} \
- ] $clk_wiz_0
 
   # Create instance: mdm_1, and set properties
   set mdm_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:mdm:3.2 mdm_1 ]
@@ -374,17 +345,13 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net microblaze_0_ilmb_1 [get_bd_intf_pins microblaze_0/ILMB] [get_bd_intf_pins microblaze_0_local_memory/ILMB]
 
   # Create port connections
-  connect_bd_net -net clk_wiz_0_clk_out2 [get_bd_ports cam_clk] [get_bd_pins clk_wiz_0/clk_out2]
-  connect_bd_net -net clk_wiz_0_clk_out3 [get_bd_ports ila_clk] [get_bd_pins clk_wiz_0/clk_out3]
-  connect_bd_net -net clk_wiz_0_locked [get_bd_pins clk_wiz_0/locked] [get_bd_pins proc_sys_reset_0/dcm_locked]
   connect_bd_net -net mdm_1_debug_sys_rst [get_bd_pins mdm_1/Debug_SYS_Rst] [get_bd_pins proc_sys_reset_0/mb_debug_sys_rst]
-  connect_bd_net -net microblaze_0_Clk [get_bd_ports clk] [get_bd_pins axi_apb_bridge_0/s_axi_aclk] [get_bd_pins axi_uartlite_0/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins microblaze_0/Clk] [get_bd_pins microblaze_0_axi_periph/ACLK] [get_bd_pins microblaze_0_axi_periph/M00_ACLK] [get_bd_pins microblaze_0_axi_periph/M01_ACLK] [get_bd_pins microblaze_0_axi_periph/S00_ACLK] [get_bd_pins microblaze_0_local_memory/LMB_Clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net microblaze_0_Clk [get_bd_ports Clk] [get_bd_pins axi_apb_bridge_0/s_axi_aclk] [get_bd_pins axi_uartlite_0/s_axi_aclk] [get_bd_pins microblaze_0/Clk] [get_bd_pins microblaze_0_axi_periph/ACLK] [get_bd_pins microblaze_0_axi_periph/M00_ACLK] [get_bd_pins microblaze_0_axi_periph/M01_ACLK] [get_bd_pins microblaze_0_axi_periph/S00_ACLK] [get_bd_pins microblaze_0_local_memory/LMB_Clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
   connect_bd_net -net proc_sys_reset_0_bus_struct_reset [get_bd_pins microblaze_0_local_memory/SYS_Rst] [get_bd_pins proc_sys_reset_0/bus_struct_reset]
   connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins microblaze_0_axi_periph/ARESETN] [get_bd_pins proc_sys_reset_0/interconnect_aresetn]
   connect_bd_net -net proc_sys_reset_0_mb_reset [get_bd_pins microblaze_0/Reset] [get_bd_pins proc_sys_reset_0/mb_reset]
   connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_ports rstn] [get_bd_pins axi_apb_bridge_0/s_axi_aresetn] [get_bd_pins axi_uartlite_0/s_axi_aresetn] [get_bd_pins microblaze_0_axi_periph/M00_ARESETN] [get_bd_pins microblaze_0_axi_periph/M01_ARESETN] [get_bd_pins microblaze_0_axi_periph/S00_ARESETN] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
-  connect_bd_net -net reset_1 [get_bd_ports reset] [get_bd_pins clk_wiz_0/resetn] [get_bd_pins proc_sys_reset_0/ext_reset_in]
-  connect_bd_net -net sys_clock_1 [get_bd_ports sys_clock] [get_bd_pins clk_wiz_0/clk_in1]
+  connect_bd_net -net reset_1 [get_bd_ports reset] [get_bd_pins proc_sys_reset_0/ext_reset_in]
 
   # Create address segments
   create_bd_addr_seg -range 0x00001000 -offset 0x50000000 [get_bd_addr_spaces microblaze_0/Data] [get_bd_addr_segs APB_M_0/Reg] SEG_APB_M_0_Reg
