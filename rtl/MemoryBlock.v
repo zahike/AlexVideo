@@ -36,8 +36,6 @@ reg [11:0] mem [0:153599];
 reg [11:0] Reg_Data;
 always @(posedge clk) 
     if (WriteEn) mem[WriteAdd] <= WriteData;
-//always @(posedge cam_in_clk) 
-//    if (rstn) mem[StaticAdd] <= StaticAdd[11:0];
 always @(posedge clk)
         Reg_Data <= mem[ReadAdd];
         

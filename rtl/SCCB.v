@@ -89,9 +89,9 @@ wire [7:1] IDadd = DataIn[31:25];
 wire [7:0] Sub_AddM = DataIn[23:16];
 wire [7:0] Sub_AddL = DataIn[15:8];
 wire [7:0] Wdata = (NewCam) ? DataIn[7:0] : DataIn[15:8];
-wire Write_sig = (WR == 2'b00) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b00) ? 1'b1 : 1'b0;
-wire Read1_sig = (WR == 2'b01) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b01) ? 1'b1 : 1'b0;
-wire Read2_sig = (WR == 2'b10) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b10) ? 1'b1 : 1'b0;
+wire Write_sig = (WR[1:0] == 2'b00) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b00) ? 1'b1 : 1'b0;
+wire Read1_sig = (WR[1:0] == 2'b01) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b01) ? 1'b1 : 1'b0;
+wire Read2_sig = (WR[1:0] == 2'b10) ? 1'b1 : 1'b0; //(DataIn[25:24] == 2'b10) ? 1'b1 : 1'b0;
 reg [37:0] SCCBshift;     
 always @(posedge clk or negedge rstn)
     if (!rstn) SCCBshift <= 38'h0000000000;

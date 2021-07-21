@@ -87,10 +87,8 @@ reg Reg_readMem;
 always @(posedge clk or negedge rstn)
     if (!rstn) Reg_readMem <= 1'b0;
      else if (!blockLines) Reg_readMem <= 1'b0;
-//     else if (Couter == 142) Reg_readMem <= 1'b1;
-     else if (Couter == 110) Reg_readMem <= 1'b1;
-//     else if (Couter == 782) Reg_readMem <= 1'b0;
-     else if (Couter == 750) Reg_readMem <= 1'b0;
+     else if (Couter == 120) Reg_readMem <= 1'b1;
+     else if (Couter == 760) Reg_readMem <= 1'b0;
 
 //wire ReadMem;
 reg [19:0] Reg_ReadAdd;
@@ -104,10 +102,16 @@ reg SendVGA;
 always @(posedge clk or negedge rstn)
     if (!rstn) SendVGA <= 1'b0;
      else SendVGA <= Reg_readMem;
+
+reg [1:0] DevVSYNC;
+always @(posedge clk or negedge rstn)
+    if (!rstn) DevVSYNC <= 2'b00;
+     else DevVSYNC <= {DevVSYNC[0],VSYNC};
+         
 reg bVGA;
 always @(posedge clk or negedge rstn)
     if (!rstn) bVGA <= 1'b0;
-     else if (SyncVsync) bVGA <= ~bVGA;
+     else if (DevVSYNC == 2'b10) bVGA <= ~bVGA;
      else if (!SendVGA && Reg_readMem) bVGA <= ~bVGA;
      else if (SendVGA) bVGA <= ~bVGA; 
 wire [11:0] VGAdata = (SendVGA && !bVGA) ? ReadData : 12'h000;

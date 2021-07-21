@@ -52,7 +52,7 @@ set_property PACKAGE_PIN C5 [get_ports {RED[2]}]
 set_property PACKAGE_PIN B4 [get_ports {RED[1]}]
 set_property PACKAGE_PIN A3 [get_ports {RED[0]}]
 set_property PACKAGE_PIN B11 [get_ports HSYNC]
-set_property PACKAGE_PIN B12  [get_ports VSYNC]
+set_property PACKAGE_PIN B12 [get_ports VSYNC]
 
 set_property IOSTANDARD LVCMOS33 [get_ports {BLU[3]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {BLU[2]}]
@@ -69,14 +69,17 @@ set_property IOSTANDARD LVCMOS33 [get_ports {RED[0]}]
 set_property IOSTANDARD LVCMOS33 [get_ports HSYNC]
 set_property IOSTANDARD LVCMOS33 [get_ports VSYNC]
 
-set_property PACKAGE_PIN A13 [get_ports DeBug_cam_clk   ]
+set_property PACKAGE_PIN A13 [get_ports DeBug_cam_clk]
 set_property PACKAGE_PIN A14 [get_ports DeBug_cam_in_clk]
-set_property IOSTANDARD LVCMOS33 [get_ports DeBug_cam_clk   ]
+set_property IOSTANDARD LVCMOS33 [get_ports DeBug_cam_clk]
 set_property IOSTANDARD LVCMOS33 [get_ports DeBug_cam_in_clk]
+
+
+set_property PULLUP true [get_ports SCCB_DATA]
+set_property PULLDOWN true [get_ports cam_in_clk]
+
 
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]
 set_property C_USER_SCAN_CHAIN 1 [get_debug_cores dbg_hub]
 connect_debug_port dbg_hub/clk [get_nets clk]
-
-set_property PULLUP true [get_ports SCCB_DATA]

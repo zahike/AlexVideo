@@ -54,13 +54,14 @@ input  wire usb_uart_rxd     ,
 output wire usb_uart_txd
 
     );
-
 assign DeBug_cam_clk    = cam_clk   ;
 assign DeBug_cam_in_clk = cam_in_clk;
+
 
 wire clk;		//output  clk;
 wire rstn;		//output [0:0] rstn;
 wire ila_clk;
+wire Cila_clk;
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
   clk_wiz_0 pll_inst
    (
@@ -68,6 +69,8 @@ wire ila_clk;
     .clk_out1(clk),     // output clk_out1
     .clk_out2(cam_clk),     // output clk_out2
     .clk_out3(ila_clk),     // output clk_out3
+    .clk_out4(Cila_clk),     // output clk_out4
+    
    // Clock in ports
     .clk_in1(sys_clock));      // input clk_in1
 // SCCB signals
@@ -80,11 +83,16 @@ assign SCCB_CLK  = (sccb_clk_en) ? sccb_clk : 1'b1;
 assign SCCB_DATA = (~sccb_data_en) ? sccb_data_out : 1'bz;
 assign sccb_data_in = SCCB_DATA;
 
-reg [1:0] DevCamVsync;
+//assign DeBug_cam_clk    = SCCB_CLK   ;
+//assign DeBug_cam_in_clk = sccb_data_in;
+
+reg [7:0] DevCamVsync;
+//always @(posedge cam_in_clk or negedge rstn)
 always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) DevCamVsync <= 2'b00;
-     else DevCamVsync <= {DevCamVsync[0],cam_vsynk};
-wire SyncCamVsync = (DevCamVsync == 2'b01) ? 1'b1 :1'b0;
+    if (!rstn) DevCamVsync <= 8'h00;
+     else DevCamVsync <= {DevCamVsync[6:0],cam_vsynk};
+wire SyncCamVsync = (DevCamVsync == 8'h7f) ? 1'b1 :1'b0;
+wire cam_vsynk_sync = (DevCamVsync == 8'hff) ? 1'b1 :1'b0;
 
 wire        WriteEn      ;
 wire [18:0] WriteAdd     ;
@@ -103,7 +111,7 @@ Camera_interface Camera_interface_inst(
 .sccb_data_en  (sccb_data_en ),// output wire       sccb_data_en  ,
 
 .cam_in_clk    (cam_in_clk   ),// input  wire       cam_in_clk    ,
-.cam_vsynk     (cam_vsynk    ),// input  wire       cam_vsynk     ,
+.cam_vsynk     (cam_vsynk_sync    ),// input  wire       cam_vsynk     ,
 .cam_href      (cam_href     ),// input  wire       cam_href      ,
 .cam_data      (cam_data     ),// input  wire [7:0] cam_data      ,
 .cam_rstn      (cam_rstn     ),// output wire       cam_rstn      ,
@@ -149,37 +157,55 @@ VGA VGA_inst(
 .VSYNC(VSYNC)
     );
     
-reg [31:0] CamTimeCount;
-always @(posedge ila_clk or negedge rstn)
-    if (!rstn) CamTimeCount <= 32'h00000000;
-     else if (SyncCamVsync) CamTimeCount <= 32'h00000000;
-     else CamTimeCount <= CamTimeCount + 1;
-     
-////----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
-//     ila_0 Cam_ila (
-//         .clk(ila_clk), // input wire clk
- 
-// 	     .probe0(cam_vsynk), // input wire [0:0]  probe0  
-//         .probe1(cam_href ), // input wire [0:0]  probe1 
-//         .probe2(writeAdd), // input wire [19:0]  probe2 
-//         .probe3(VSYNC), // input wire [0:0]  probe3 
-//         .probe4(HSYNC), // input wire [0:0]  probe4 
-//         .probe5(ROMadd) // input wire [19:0]  probe5
-//     );
-     
+reg [31:0] OutCamTimeCount;
+always @(posedge cam_clk or negedge rstn)
+    if (!rstn) OutCamTimeCount <= 32'h00000000;
+     else if (cam_vsynk_sync) OutCamTimeCount <= 32'h00000000;
+     else OutCamTimeCount <= OutCamTimeCount + 1;
+reg [31:0] InCamTimeCount;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) InCamTimeCount <= 32'h00000000;
+     else if (cam_vsynk_sync) InCamTimeCount <= 32'h00000000;
+     else InCamTimeCount <= InCamTimeCount + 1;
 
+wire [31:0] CounterSub = OutCamTimeCount - InCamTimeCount;
+//----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
+ila_0 Cam_ila (
+    .clk(Cila_clk), // input wire clk
+
+	.probe0(cam_clk    ), // input wire [0:0]  probe0  
+	.probe1(cam_in_clk ), // input wire [0:0]  probe1 
+	.probe2(cam_vsynk_sync  ), // input wire [0:0]  probe2 
+	.probe3(cam_href   ), // input wire [0:0]  probe3 
+	.probe4(cam_data   ), // input wire [7:0]  probe4 
+	.probe5(cam_rstn   ), // input wire [0:0]  probe5 
+	.probe6(cam_pwdn   ), // input wire [0:0]  probe6 
+	.probe7(OutCamTimeCount), // input wire [31:0]  probe7
+	.probe8(InCamTimeCount), // input wire [31:0]  probe8
+	.probe9(CounterSub) // input wire [31:0]  probe9
+	     );
+     
+reg [1:0] DecSCCB_CLK;
+always @(posedge clk or negedge rstn)
+    if (!rstn) DecSCCB_CLK <= 2'b00;
+     else DecSCCB_CLK <= {DecSCCB_CLK[0],SCCB_CLK};
+
+reg [9:0] Reg_ReadData;
+always @(posedge clk or negedge rstn)
+    if (!rstn) Reg_ReadData <= 8'h00;
+    else if (DecSCCB_CLK == 2'b01) Reg_ReadData <= {Reg_ReadData[8:0],sccb_data_in};
+  
 /*
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
 ila_1 SCCB_ila (
-	.clk(ila_clk), // input wire clk
-
+	.clk(cam_clk), // input wire clk
 
 	.probe0(sccb_clk     ), // input wire [0:0]  probe0  
 	.probe1(sccb_clk_en  ), // input wire [0:0]  probe1 
 	.probe2(sccb_data_out), // input wire [0:0]  probe2 
 	.probe3(sccb_data_in ), // input wire [0:0]  probe3 
 	.probe4(sccb_data_en ), // input wire [0:0]  probe4 
-	.probe5(ReadData) // input wire [7:0]  probe5
+	.probe5(Reg_ReadData[9:2]) // input wire [7:0]  probe5
 );
-    */
+*/    
 endmodule
