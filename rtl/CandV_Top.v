@@ -47,8 +47,12 @@ output wire [3:0] BLU        ,
 output wire HSYNC            ,
 output wire VSYNC            ,            
 
-output wire DeBug_cam_clk    ,
-output wire DeBug_cam_in_clk ,
+output wire  DeBug_cam_clk    ,
+output wire  DeBug_cam_in_clk ,
+output wire  DeBug_cam_vsynk ,
+output wire  DeBug_VSYNC     ,
+output wire  DeBug_cam_href  ,
+output wire  DeBug_HSYNC     ,
 
 input  wire usb_uart_rxd     ,
 output wire usb_uart_txd
@@ -56,6 +60,10 @@ output wire usb_uart_txd
     );
 assign DeBug_cam_clk    = cam_clk   ;
 assign DeBug_cam_in_clk = cam_in_clk;
+assign DeBug_cam_vsynk  = cam_vsynk   ;
+assign DeBug_VSYNC      = VSYNC;
+assign DeBug_cam_href   = cam_href   ;
+assign DeBug_HSYNC      = HSYNC;
 
 
 wire clk;		//output  clk;
@@ -86,13 +94,13 @@ assign sccb_data_in = SCCB_DATA;
 //assign DeBug_cam_clk    = SCCB_CLK   ;
 //assign DeBug_cam_in_clk = sccb_data_in;
 
-reg [7:0] DevCamVsync;
+reg [15:0] DevCamVsync;
 //always @(posedge cam_in_clk or negedge rstn)
 always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) DevCamVsync <= 8'h00;
+    if (!rstn) DevCamVsync <= 16'h0000;
      else DevCamVsync <= {DevCamVsync[6:0],cam_vsynk};
-wire SyncCamVsync = (DevCamVsync == 8'h7f) ? 1'b1 :1'b0;
-wire cam_vsynk_sync = (DevCamVsync == 8'hff) ? 1'b1 :1'b0;
+wire SyncCamVsync =   (DevCamVsync[7:0] == 8'h7f) ? 1'b1 :1'b0;
+wire cam_vsynk_sync = (DevCamVsync[7:0] == 8'hff) ? 1'b1 :1'b0;
 
 wire        WriteEn      ;
 wire [18:0] WriteAdd     ;
@@ -145,7 +153,7 @@ VGA VGA_inst(
 .clk  (cam_in_clk  ),
 .rstn (rstn ),
 
-.SyncVsync(SyncCamVsync),
+.SyncVsync(1'b0),//SyncCamVsync),
 .ReadAdd (VGAReadAdd ),  // output wire [18:0] ReadAdd, 
 .ReadData(VGAReadData),  // input  wire [11:0] ReadData,
 
@@ -156,7 +164,21 @@ VGA VGA_inst(
 .HSYNC(HSYNC),
 .VSYNC(VSYNC)
     );
-    
+
+reg [7:0] dev_cam_href;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) dev_cam_href <= 8'h00;
+     else dev_cam_href <= {dev_cam_href[6:0],cam_href};
+wire Start_cam_href = (dev_cam_href == 8'h7f) ? 1'b1 : 1'b0;
+wire Pulse_cam_href = (dev_cam_href == 8'hff) ? 1'b1 : 1'b0;
+     
+
+reg [31:0] cam_href_count;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) cam_href_count <= 32'h00000000;
+     else if (SyncCamVsync) cam_href_count <= 32'h00000000;
+     else if (Start_cam_href) cam_href_count <= cam_href_count + 1;
+     
 reg [31:0] OutCamTimeCount;
 always @(posedge cam_clk or negedge rstn)
     if (!rstn) OutCamTimeCount <= 32'h00000000;
@@ -165,7 +187,7 @@ always @(posedge cam_clk or negedge rstn)
 reg [31:0] InCamTimeCount;
 always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) InCamTimeCount <= 32'h00000000;
-     else if (cam_vsynk_sync) InCamTimeCount <= 32'h00000000;
+     else if (SyncCamVsync) InCamTimeCount <= 32'h00000000;
      else InCamTimeCount <= InCamTimeCount + 1;
 
 wire [31:0] CounterSub = OutCamTimeCount - InCamTimeCount;
@@ -182,7 +204,7 @@ ila_0 Cam_ila (
 	.probe6(cam_pwdn   ), // input wire [0:0]  probe6 
 	.probe7(OutCamTimeCount), // input wire [31:0]  probe7
 	.probe8(InCamTimeCount), // input wire [31:0]  probe8
-	.probe9(CounterSub) // input wire [31:0]  probe9
+	.probe9(cam_href_count) // input wire [31:0]  probe9
 	     );
      
 reg [1:0] DecSCCB_CLK;
