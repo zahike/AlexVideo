@@ -58,6 +58,7 @@ int writeSCCB (int WriteData);
 int write4readSCCB (int WriteData);
 int readSCCB (int WriteData);
 void Camera_config();
+void VGA30fpsConf();
 
 int main()
 {
@@ -73,7 +74,8 @@ int main()
 	freq = 1000000/(START_FREQ*20);
 	xil_printf("frequency %d \n\r",freq);
 
-	Camera_config();
+//	Camera_config();
+	VGA30fpsConf();
     while (1)
     {
     	ch = 0;

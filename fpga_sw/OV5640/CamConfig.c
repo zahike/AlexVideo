@@ -17,17 +17,18 @@ void Camera_config()
 	writeSCCB(0x783017f0);// FREX, Vsync, HREF, PCLK, D[9:6] output enable
 	writeSCCB(0x78301800);// D[5:0], GPIO[1:0] output enable
 writeSCCB(0x78310801); // SCLK pll_clk/2 No Output if 00
-writeSCCB(0x7830363a); // PLL multiplier
+//writeSCCB(0x7830363a); // PLL multiplier
+writeSCCB(0x7830361c); // PLL multiplier
 //writeSCCB(0x78303713); // PLL divider
 writeSCCB(0x78303706); // PLL divider OK
 //writeSCCB(0x7836302e);
 
-writeSCCB(0x78382127);    // <= ?
-
-writeSCCB(0x78382404);  //<= PCLK manual divideer
-
-writeSCCB(0x78300200);   // reset blocks register enable all blocks
-writeSCCB(0x783006ff);     // enable clocks
+////writeSCCB(0x78382127);    // <= ?
+//
+//writeSCCB(0x78382404);  //<= PCLK manual divideer
+//
+//writeSCCB(0x78300200);   // reset blocks register enable all blocks
+//writeSCCB(0x783006ff);     // enable clocks
 
 
 
@@ -51,7 +52,7 @@ writeSCCB(0x783006ff);     // enable clocks
 //writeSCCB(0x78360133);
 //writeSCCB(0x78471c50);
 //writeSCCB(0x78382041);
-////writeSCCB(0x78382127);   //<= not know ?
+//writeSCCB(0x78382127);   //<= not know ?
 //writeSCCB(0x78381471);  //<= need check
 //writeSCCB(0x78381535);
 //writeSCCB(0x78380000);
@@ -74,6 +75,7 @@ writeSCCB(0x783006ff);     // enable clocks
 //writeSCCB(0x78381108);
 //writeSCCB(0x78381200);
 //writeSCCB(0x78381302);
+
 //writeSCCB(0x78361800);
 //writeSCCB(0x78361249);
 //writeSCCB(0x78370866);

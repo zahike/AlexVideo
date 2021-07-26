@@ -98,7 +98,7 @@ reg [15:0] DevCamVsync;
 //always @(posedge cam_in_clk or negedge rstn)
 always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) DevCamVsync <= 16'h0000;
-     else DevCamVsync <= {DevCamVsync[6:0],cam_vsynk};
+     else DevCamVsync <= {DevCamVsync[6:0],(cam_vsynk && !cam_href)};
 wire SyncCamVsync =   (DevCamVsync[7:0] == 8'h7f) ? 1'b1 :1'b0;
 wire cam_vsynk_sync = (DevCamVsync[7:0] == 8'hff) ? 1'b1 :1'b0;
 
@@ -139,7 +139,8 @@ wire [18:0] VGAReadAdd ;
 wire [11:0] VGAReadData;
 
 MemoryBlock MemoryBlock_inst(
-.clk      (cam_in_clk),       // input  clk,               
+.clk      (cam_in_clk),       // input  clk,   
+.Rclk     (ila_clk),            
 
 .WriteEn  (WriteEn  ),   // input  WriteEn,           
 .WriteAdd (WriteAdd ),   // input  [18:0] WriteAdd,   
@@ -148,9 +149,16 @@ MemoryBlock MemoryBlock_inst(
 .ReadAdd  (VGAReadAdd),     // input  [18:0] ReadAdd,    
 .ReadData (VGAReadData)           // output [11:0] ReadData    
     );
-     
+
+reg Div_cam_in_clk;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) Div_cam_in_clk <= 1'b0;
+     else Div_cam_in_clk <= ~Div_cam_in_clk;
+           
 VGA VGA_inst(
-.clk  (cam_in_clk  ),
+//.clk  (cam_in_clk  ),
+//.clk  (Div_cam_in_clk  ),
+.clk  (ila_clk  ),
 .rstn (rstn ),
 
 .SyncVsync(1'b0),//SyncCamVsync),
@@ -173,10 +181,10 @@ wire Start_cam_href = (dev_cam_href == 8'h7f) ? 1'b1 : 1'b0;
 wire Pulse_cam_href = (dev_cam_href == 8'hff) ? 1'b1 : 1'b0;
      
 
-reg [31:0] cam_href_count;
+reg [15:0] cam_href_count;
 always @(posedge cam_in_clk or negedge rstn)
-    if (!rstn) cam_href_count <= 32'h00000000;
-     else if (SyncCamVsync) cam_href_count <= 32'h00000000;
+    if (!rstn) cam_href_count <= 16'h0000;
+     else if (SyncCamVsync) cam_href_count <= 16'h0000;
      else if (Start_cam_href) cam_href_count <= cam_href_count + 1;
      
 reg [31:0] OutCamTimeCount;
@@ -189,6 +197,12 @@ always @(posedge cam_in_clk or negedge rstn)
     if (!rstn) InCamTimeCount <= 32'h00000000;
      else if (SyncCamVsync) InCamTimeCount <= 32'h00000000;
      else InCamTimeCount <= InCamTimeCount + 1;
+
+reg [15:0] Cam_hsyncCounter;
+always @(posedge cam_in_clk or negedge rstn)
+    if (!rstn) Cam_hsyncCounter <= 16'h0000;
+     else if (!cam_href) Cam_hsyncCounter <= 16'h0000;
+     else Cam_hsyncCounter <= Cam_hsyncCounter + 1;
 
 wire [31:0] CounterSub = OutCamTimeCount - InCamTimeCount;
 //----------- Begin Cut here for INSTANTIATION Template ---// INST_TAG
@@ -204,7 +218,10 @@ ila_0 Cam_ila (
 	.probe6(cam_pwdn   ), // input wire [0:0]  probe6 
 	.probe7(OutCamTimeCount), // input wire [31:0]  probe7
 	.probe8(InCamTimeCount), // input wire [31:0]  probe8
-	.probe9(cam_href_count) // input wire [31:0]  probe9
+	.probe9({cam_href_count,Cam_hsyncCounter}), // input wire [31:0]  probe9
+	.probe10(WriteEn  ), // input wire [0:0]  probe10 
+    .probe11(WriteAdd ), // input wire [18:0]  probe11 
+    .probe12(WriteData) // input wire [11:0]  probe12
 	     );
      
 reg [1:0] DecSCCB_CLK;

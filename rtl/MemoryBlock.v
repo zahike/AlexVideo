@@ -22,6 +22,7 @@
 
 module MemoryBlock(
 input  clk,
+input Rclk,
 
 input  WriteEn,
 input  [18:0] WriteAdd,
@@ -36,7 +37,7 @@ reg [11:0] mem [0:153599];
 reg [11:0] Reg_Data;
 always @(posedge clk) 
     if (WriteEn) mem[WriteAdd] <= WriteData;
-always @(posedge clk)
+always @(posedge Rclk)
         Reg_Data <= mem[ReadAdd];
         
 assign ReadData = Reg_Data;    
